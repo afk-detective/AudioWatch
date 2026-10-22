@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AudioWatch 筆錄收音監看</title>
+<meta name="description" content="製作筆錄時，在螢幕角落即時顯示收音、錄影畫面與錄影狀態。不錄音、不連網，Windows 10／11 免費使用。">
+<meta property="og:title" content="AudioWatch 筆錄收音監看">
+<meta property="og:description" content="收音中斷、畫面全黑、忘了按錄影，當下就會知道。">
+<meta property="og:image" content="assets/state-ok.png">
+<link rel="icon" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
+<script>
+/* =========================================================
+   網站設定：上架後只需要改這裡
+   ========================================================= */
+const SITE = {
+  githubUser: "",               // 放網站與下載檔的 GitHub 帳號，例如 "my-account"
+  repo: "audiowatch",           // repo 名稱
+  assetName: "AudioWatch.zip",  // Releases 上傳的檔名（請保持一致）
+  goatcounter: "",              // GoatCounter 代碼，例如 "audiowatch"（= audiowatch.goatcounter.com）
+  version: "2.0.0",
+  sha256: "3fcda53762747ab0f4d3cdc08d6ef83fc5e319124d2d76558c7d9f3cb57c5b49",
+  email: "tcpb0919@gmail.com"
+};
+</script>
+<style>
+:root{
+  --paper:#F7F8FA; --paper-2:#EDEFF3; --ink:#18202C; --ink-2:#3A4352; --slate:#5E6776; --line:#D9DDE3;
+  --go:#16996A; --go-ink:#0F7A54; --rec:#D23F3F; --warn:#B87605;
+  --desk:#1A1F27; --desk-2:#232A34;
+  --serif:"Noto Serif TC","Noto Serif CJK TC","Songti TC","PMingLiU",serif;
+  --sans:"Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 17px/1.75 var(--sans);font-feature-settings:"tnum" 0}
+a{color:var(--go-ink)}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--go);outline-offset:3px;border-radius:6px}
+img{max-width:100%;display:block}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+.narrow{max-width:720px}
+
+/* ---- header ---- */
+.top{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--ink);text-decoration:none;font-size:17px}
+.brand img{width:30px;height:30px;border-radius:8px}
+.top nav{display:flex;gap:22px;font-size:15px}
+.top nav a{color:var(--ink-2);text-decoration:none}
+.top nav a:hover{color:var(--ink)}
+
+/* ---- hero ---- */
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;padding:40px 0 88px}
+.hero h1{font:900 clamp(36px,5.2vw,58px)/1.18 var(--serif);letter-spacing:.01em;margin:0 0 22px;text-wrap:balance}
+.hero p.lead{font-size:19px;color:var(--ink-2);margin:0 0 32px;max-width:30em}
+.cta{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px}
+.btn{display:inline-flex;align-items:center;gap:10px;background:var(--go);color:#fff;font:700 17px/1 var(--sans);padding:17px 26px;border-radius:12px;text-decoration:none;border:0;cursor:pointer}
+.btn:hover{background:var(--go-ink)}
+.btn svg{width:20px;height:20px}
+.btn[aria-disabled="true"]{background:#9AA3AF;cursor:not-allowed}
+.meta{font-size:14px;color:var(--slate);display:flex;gap:14px;flex-wrap:wrap}
+.meta span+span{padding-left:14px;border-left:1px solid var(--line)}
+.ghost{color:var(--ink-2);font-weight:500;font-size:16px}
+
+/* live widget */
+.desk{background:var(--desk);border-radius:22px;padding:34px 28px 22px;position:relative}
+.desk canvas{display:block;width:100%;height:auto;max-width:456px;margin:0 auto;border-radius:12px;box-shadow:0 18px 40px rgba(0,0,0,.35)}
+.demo-switch{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px}
+.demo-switch button{font:500 14px/1 var(--sans);color:#C9CED6;background:var(--desk-2);border:1px solid #333B47;border-radius:999px;padding:9px 14px;cursor:pointer}
+.demo-switch button[aria-pressed="true"]{background:#E9ECEF;color:var(--desk);border-color:#E9ECEF}
+.demo-cap{text-align:center;color:#9AA3AF;font-size:14px;margin:14px 0 0;min-height:1.75em}
+
+/* ---- sections ---- */
+section{padding:72px 0;border-top:1px solid var(--line)}
+h2{font:900 clamp(28px,3.4vw,38px)/1.3 var(--serif);margin:0 0 18px;text-wrap:balance}
+h3{font:700 19px/1.5 var(--sans);margin:0 0 6px}
+p{margin:0 0 16px}
+.sub{color:var(--slate)}
+
+.why{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:start}
+.law{border-left:4px solid var(--ink);padding:4px 0 4px 22px;font-family:var(--serif);font-size:18px;line-height:1.9;color:var(--ink)}
+.law small{display:block;font:400 14px/1.6 var(--sans);color:var(--slate);margin-top:10px}
+
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:34px}
+.three > div{padding:6px 28px 6px 0}
+.three > div + div{padding-left:28px;border-left:1px solid var(--line)}
+.ico{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;margin-bottom:16px;color:#fff}
+.ico svg{width:22px;height:22px}
+
+.lights{margin-top:30px;border-collapse:collapse;width:100%}
+.lights td{padding:18px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+.lights td:first-child{width:170px;white-space:nowrap;font-weight:700}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:10px;vertical-align:0}
+
+.steps{list-style:none;padding:0;margin:34px 0 0;counter-reset:s;display:grid;gap:26px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:52px 1fr;gap:18px;align-items:start}
+.steps li::before{content:counter(s);width:52px;height:52px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font:900 22px var(--serif)}
+.steps p{margin:0;color:var(--ink-2)}
+kbd{font:500 14px var(--sans);background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:1px 7px}
+
+.fest{display:grid;grid-template-columns:1fr 1.1fr;gap:48px;align-items:center}
+.fest-shot{display:block;background:var(--desk);border-radius:18px;padding:16px}
+.fest-shot img{border-radius:10px;width:100%;height:auto}
+.warnbox{margin-top:40px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px 28px;display:grid;grid-template-columns:1fr 260px;gap:28px;align-items:center}
+.ss{background:#2B5797;color:#fff;border-radius:6px;padding:16px 16px 12px;font-size:13px;line-height:1.5}
+.ss b{display:block;font-size:16px;margin-bottom:6px}
+.ss u{color:#fff}
+.ss .row{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.ss .row span{border:1px solid #fff;padding:4px 12px;font-size:12px}
+.ss .hl{outline:3px solid #FBBF24;outline-offset:2px}
+
+.safe{columns:2;column-gap:48px;padding:0;margin:26px 0 0;list-style:none}
+.safe li{break-inside:avoid;padding:0 0 14px 30px;position:relative}
+.safe li::before{content:"";position:absolute;left:0;top:.55em;width:14px;height:8px;border-left:3px solid var(--go);border-bottom:3px solid var(--go);transform:rotate(-45deg)}
+.hash{margin-top:34px;background:var(--ink);color:#E9ECEF;border-radius:14px;padding:22px 24px}
+.hash .label{font-size:14px;color:#AEB5C0;margin-bottom:8px}
+.hash code{font:500 15px/1.6 var(--mono);word-break:break-all;color:#fff}
+.hash .tools{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;margin-top:14px;font-size:14px;color:#AEB5C0}
+.copy{font:500 14px var(--sans);background:#fff;color:var(--ink);border:0;border-radius:8px;padding:8px 14px;cursor:pointer}
+
+details{border-bottom:1px solid var(--line);padding:18px 0}
+summary{font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-weight:400;font-size:22px;line-height:1;color:var(--slate)}
+details[open] summary::after{content:"−"}
+details p{margin:12px 0 0;color:var(--ink-2)}
+
+/* ---- footer ---- */
+footer{background:var(--paper-2);padding:44px 0 52px;margin-top:40px;font-size:14px;color:var(--slate)}
+.stats{display:flex;gap:44px;flex-wrap:wrap;margin-bottom:26px}
+.stat .n{font:900 30px/1.2 var(--serif);color:var(--ink);font-variant-numeric:tabular-nums}
+.stat .l{font-size:14px;color:var(--slate)}
+.fine{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;border-top:1px solid var(--line);padding-top:18px}
+
+@media (max-width:860px){
+  .hero,.why{grid-template-columns:1fr;gap:40px}
+  .hero{padding:16px 0 64px}
+  .three{grid-template-columns:1fr}
+  .three > div,.three > div + div{padding:22px 0;border-left:0;border-top:1px solid var(--line)}
+  .three > div:first-child{border-top:0;padding-top:0}
+  .warnbox{grid-template-columns:1fr}
+  .fest{grid-template-columns:1fr;gap:28px}
+  .safe{columns:1}
+  .top nav{display:none}
+  .lights td:first-child{width:auto;white-space:normal}
+}
+@media (max-width:480px){
+  .wrap{padding:0 16px}
+  .desk{padding:22px 12px 16px;border-radius:16px}
+  .lights td{padding:14px 8px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#"><img src="assets/icon-180.png" alt="">AudioWatch</a>
+    <nav aria-label="頁面導覽">
+      <a href="#why">為什麼需要</a><a href="#how">使用方式</a><a href="#festival">節慶彩蛋</a><a href="#safe">安全性</a><a href="#faq">常見問題</a>
+    </nav>
+  </header>
+
+  <main>
+  <div class="hero">
+    <div>
+      <h1>做筆錄時，<br>錄音有沒有在錄，<br>看一眼就知道。</h1>
+      <p class="lead">AudioWatch 是放在螢幕右下角的小視窗，同時盯住收音、錄影畫面與錄影狀態。收音中斷、畫面全黑、忘了按錄影，當下就會變色提醒。</p>
+      <div class="cta">
+        <a class="btn" id="dl" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
+          下載 AudioWatch
+        </a>
+        <a class="ghost" href="#how">先看怎麼用</a>
+      </div>
+      <p class="meta" style="margin-top:18px"><span id="ver">版本 1.3.0</span><span>Windows 10／11</span><span>免費使用</span></p>
+    </div>
+
+    <div class="desk" aria-label="小視窗實際運作示範">
+      <canvas id="w" width="608" height="268" role="img" aria-label="AudioWatch 小視窗示範畫面"></canvas>
+      <div class="demo-switch" role="group" aria-label="切換示範狀態">
+        <button type="button" data-s="ok" aria-pressed="true">全部正常</button>
+        <button type="button" data-s="nodata" aria-pressed="false">收音中斷</button>
+        <button type="button" data-s="black" aria-pressed="false">畫面全黑</button>
+        <button type="button" data-s="voice" aria-pressed="false">忘了按錄影</button>
+      </div>
+      <p class="demo-cap" id="cap" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <section id="why">
+    <div class="why">
+      <div>
+        <h2>錄影沒有聲音，筆錄可能就不能用</h2>
+        <p>詢問全程錄音錄影，是法律明定的程序。設備出狀況時，往往要等到開庭調閱才發現錄影檔沒有聲音，這時已經無法補救。</p>
+        <p>2026 年 10 月就有一件案例：警詢錄影畫面沒有聲音，說明原因是電腦軟體不相容。法院認為詢問前就應確認錄音設備正常，不能把設備問題的後果轉嫁給被詢問人，警詢筆錄因此被認定沒有證據能力。</p>
+        <p class="sub">AudioWatch 的目的很單純：讓問題在製作筆錄的當下就被發現。</p>
+      </div>
+      <blockquote class="law">
+        訊問被告，應全程連續錄音；必要時，並應全程連續錄影。
+        <small>刑事訴訟法第 100 條之 1 第 1 項。依第 100 條之 2，司法警察詢問犯罪嫌疑人時準用。</small>
+      </blockquote>
+    </div>
+
+    <div class="three">
+      <div>
+        <div class="ico" style="background:var(--go)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></div>
+        <h3>收音</h3>
+        <p class="sub">即時音波顯示麥克風有沒有聲音進來。收音中斷、麥克風被靜音、長時間無聲都會提醒。</p>
+      </div>
+      <div>
+        <div class="ico" style="background:var(--go)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></div>
+        <h3>畫面</h3>
+        <p class="sub">每秒檢查一次錄影軟體的預覽畫面。全黑、只剩單一顏色、畫面凍結都會提醒。</p>
+      </div>
+      <div>
+        <div class="ico" style="background:var(--rec)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor"/></svg></div>
+        <h3>錄影</h3>
+        <p class="sub">看錄影檔有沒有持續變大，判斷是否真的在錄影。錄影停止、有人說話卻沒在錄，都會提醒。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>燈號怎麼看</h2>
+    <table class="lights">
+      <tr><td><span class="dot" style="background:var(--go)"></span>綠燈</td><td>收音、畫面、錄影都正常，可以放心進行詢問。</td></tr>
+      <tr><td><span class="dot" style="background:var(--warn)"></span>黃燈</td><td>需要注意：持續無聲、畫面凍結、錄影停止，或有人說話卻沒在錄影。提示音響一次。</td></tr>
+      <tr><td><span class="dot" style="background:var(--rec)"></span>紅燈</td><td>立即處理：收音中斷、麥克風被靜音、畫面全黑或無影像。整個視窗閃爍，每 5 秒提示一次。</td></tr>
+    </table>
+    <p class="sub" style="margin-top:18px">每次中斷與恢復的時間都會自動記錄，右鍵選「本次異常紀錄」即可複製，方便在筆錄中註記。</p>
+  </section>
+
+  <section id="how">
+    <h2>使用方式</h2>
+    <p class="sub">不用安裝，設定一次會自動記住，大約 2 分鐘。</p>
+    <ol class="steps">
+      <li><div><h3>解壓縮並開啟</h3><p>下載後解壓縮，雙擊 <b>AudioWatch.exe</b>，小視窗會出現在螢幕右下角。</p></div></li>
+      <li><div><h3>選擇麥克風</h3><p>在小視窗按右鍵，選「選擇麥克風」，選錄影系統使用的那一支。</p></div></li>
+      <li><div><h3>框選錄影畫面</h3><p>點小視窗左邊的「＋ 框選畫面」，用滑鼠框住錄影軟體的預覽畫面。</p></div></li>
+      <li><div><h3>指定錄影資料夾</h3><p>點「錄影 未設定」，選擇錄影檔存放的資料夾。按一次錄影，約 2 秒後右上角出現紅色 REC，就完成了。</p></div></li>
+    </ol>
+
+    <div class="warnbox">
+      <div>
+        <h3>第一次開啟時，Windows 可能跳出警告</h3>
+        <p class="sub" style="margin:8px 0 0">這是因為程式沒有購買商業數位簽章，Windows 不認得發行者，並不是偵測到病毒。請點 <kbd>其他資訊</kbd>，再點 <kbd>仍要執行</kbd>。不放心的話，可以先用下方的 SHA256 核對檔案。</p>
+      </div>
+      <div class="ss" aria-hidden="true">
+        <b>Windows 已保護您的電腦</b>
+        Windows 已防止無法辨識的應用程式啟動……<br>
+        <u class="hl">其他資訊</u>
+        <div class="row"><span class="hl">仍要執行</span><span>不要執行</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="festival">
+    <div class="fest">
+      <div>
+        <h2>節日到了，小視窗也會過節</h2>
+        <p class="sub">春節、端午、中秋、國慶、聖誕、元旦和警察節，小視窗會自動換上節慶動畫：三合院前團圓的家人、比賽的龍舟、戴柚子帽的玉兔、拉彩煙的戰機、駕雪橇的聖誕老公公、跨年倒數，還有警察節的抓人短劇。點一下小視窗還有小驚喜。</p>
+        <p class="sub">筆錄結束時，小視窗會說聲「辛苦了」，並告訴你這次錄了多久、收音是否全程正常。</p>
+        <p class="sub">一出現警示，所有節慶效果立刻收起；不喜歡也可以在右鍵選單關閉。</p>
+        <p style="margin-top:22px"><a class="btn" href="festival.html">玩玩看節慶動畫</a></p>
+      </div>
+      <a class="fest-shot" href="festival.html" aria-label="打開節慶動畫預覽"><img src="assets/festival.png" alt="七個節日的小視窗動畫示意" loading="lazy"></a>
+    </div>
+  </section>
+
+  <section id="safe">
+    <h2>只看狀態，不碰內容</h2>
+    <p class="sub">程式只判斷「有沒有聲音、畫面正不正常、檔案有沒有在變大」，不會取得任何內容。</p>
+    <ul class="safe">
+      <li>不錄音：只計算音量大小，聲音不保存</li>
+      <li>不錄影：只看你框選的區域，縮圖不存檔</li>
+      <li>不讀影片：錄影資料夾只看檔名與大小</li>
+      <li>不連網：程式沒有任何網路功能</li>
+      <li>不需要系統管理員權限、不修改系統設定</li>
+      <li>不會開機自動執行，關掉就完全停止</li>
+    </ul>
+
+    <div class="hash">
+      <div class="label" id="hashLabel">AudioWatch.exe 官方 SHA256（版本 1.3.0）</div>
+      <code id="hash"></code>
+      <div class="tools">
+        <button class="copy" type="button" id="copyHash">複製雜湊值</button>
+        <span>核對方式：在「命令提示字元」輸入 <code style="font-family:var(--mono);color:#fff">certutil -hashfile AudioWatch.exe SHA256</code>，或在小視窗右鍵 →「關於本程式」查看。</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <h2>常見問題</h2>
+    <div class="narrow">
+      <details><summary>需要安裝嗎？</summary><p>不用。解壓縮後直接執行 AudioWatch.exe。電腦需要 Windows 10 或 11（內建 .NET Framework 4.x，不必另外安裝）。</p></details>
+      <details><summary>支援哪些錄影軟體？</summary><p>不限品牌。錄影狀態是看錄影檔有沒有持續變大，畫面是看你框選的預覽區域，所以任何會把錄影檔存在電腦裡的錄影軟體都適用。</p></details>
+      <details><summary>單位電腦被防毒或資訊管理系統擋下來怎麼辦？</summary><p>請把下載包裡的「給資訊室的說明.txt」交給資訊人員，裡面列出程式的所有行為與部署建議，資訊單位如需審閱原始碼可以來信索取。</p></details>
+      <details><summary>節慶動畫會不會干擾工作？</summary><p>不會。動畫只畫在空白處、不蓋住警示，出現黃燈或紅燈就立刻全部收起；每天只跳一次橫幅。右鍵「節慶彩蛋」可以選活潑、標準、含蓄或關閉。</p></details>
+      <details><summary>綠燈就代表錄影檔一定有聲音嗎？</summary><p>不完全是。本工具看的是麥克風訊號與錄影檔大小，無法打開影片確認音軌。筆錄結束後，仍建議回放開頭與結尾各幾秒做最後確認。</p></details>
+      <details><summary>可以修改或轉傳嗎？</summary><p>歡迎轉傳官方下載連結。程式為個人著作，未經作者同意請勿修改或散布修改版本。功能建議或問題回報，請來信 <a id="mail2" href="#"></a>。</p></details>
+    </div>
+  </section>
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="stats" aria-live="polite">
+      <div class="stat"><div class="n" id="views">—</div><div class="l">瀏覽人次</div></div>
+      <div class="stat"><div class="n" id="downloads">—</div><div class="l">下載次數</div></div>
+    </div>
+    <div class="fine">
+      <span>© 2026 張紘瑋　個人著作，未經同意請勿修改或散布修改版本</span>
+      <a id="mail" href="#"></a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var hasRepo = !!SITE.githubUser;
+
+  /* ---------- 下載連結、版本、雜湊、信箱 ---------- */
+  var dl = $("dl");
+  if (hasRepo) {
+    dl.href = "https://github.com/" + SITE.githubUser + "/" + SITE.repo + "/releases/latest/download/" + SITE.assetName;
+  } else {
+    dl.setAttribute("aria-disabled", "true");
+    dl.addEventListener("click", function(e){ e.preventDefault(); alert("網站尚未設定下載連結：請在 index.html 最上方的 SITE 填入 GitHub 帳號。"); });
+  }
+  $("ver").textContent = "版本 " + SITE.version;
+  $("hash").textContent = SITE.sha256;
+  $("hashLabel").textContent = "AudioWatch.exe 官方 SHA256（版本 " + SITE.version + "）";
+  ["mail","mail2"].forEach(function(id){ var a=$(id); a.textContent = SITE.email; a.href = "mailto:" + SITE.email; });
+  $("copyHash").addEventListener("click", function(){
+    var b = this;
+    function done(){ b.textContent = "已複製"; setTimeout(function(){ b.textContent = "複製雜湊值"; }, 1800); }
+    if (navigator.clipboard) navigator.clipboard.writeText(SITE.sha256).then(done, function(){});
+  });
+
+  /* ---------- 瀏覽人次（GoatCounter）---------- */
+  if (SITE.goatcounter) {
+    var gc = document.createElement("script");
+    gc.async = true; gc.src = "https://gc.zgo.at/count.js";
+    gc.setAttribute("data-goatcounter", "https://" + SITE.goatcounter + ".goatcounter.com/count");
+    document.head.appendChild(gc);
+    var base = "https://" + SITE.goatcounter + ".goatcounter.com/counter/";
+    fetch(base + "TOTAL.json").then(function(r){ if (!r.ok) throw 0; return r.json(); })
+      .catch(function(){ return fetch(base + encodeURIComponent(location.pathname) + ".json").then(function(r){ if(!r.ok) throw 0; return r.json(); }); })
+      .then(function(d){ $("views").textContent = d.count; })
+      .catch(function(){ $("views").textContent = "—"; });
+  }
+
+  /* ---------- 下載次數（GitHub Releases 統計）---------- */
+  if (hasRepo) {
+    var key = "aw-dl-" + SITE.githubUser + "-" + SITE.repo, cached = null;
+    try { cached = JSON.parse(sessionStorage.getItem(key) || "null"); } catch(e) {}
+    if (cached && Date.now() - cached.t < 10 * 60 * 1000) { $("downloads").textContent = cached.n.toLocaleString("zh-TW"); }
+    else fetch("https://api.github.com/repos/" + SITE.githubUser + "/" + SITE.repo + "/releases?per_page=100")
+      .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+      .then(function(list){
+        var n = 0;
+        list.forEach(function(rel){ (rel.assets || []).forEach(function(a){ n += a.download_count || 0; }); });
+        $("downloads").textContent = n.toLocaleString("zh-TW");
+        try { sessionStorage.setItem(key, JSON.stringify({ t: Date.now(), n: n })); } catch(e) {}
+      })
+      .catch(function(){ $("downloads").textContent = "—"; });
+  }
+
+  /* ---------- 小視窗示範（重現實際程式的畫面）---------- */
+  var cv = $("w"), g = cv.getContext("2d");
+  var K = 2;                                  // 畫布為 304×134 的 2 倍
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var C = { bg:"#14171D", panel:"#1D2129", border:"#343A44", text:"#ECEEF1", dim:"#969DA8", faint:"#606772",
+            green:"#34D399", amber:"#FBBF24", red:"#F87171", rec:"#DC2626" };
+  var STATES = {
+    ok:     { lv:"ok",    title:"全部正常", sub:"錄影檔：20261019_102341.mp4　1.24 GB", rec:true,  thumb:"img",   audio:"talk",
+              chips:[["ok","收音 正常"],["ok","畫面 正常"],["ok","錄影中"]], cap:"三個標籤都是綠色，可以放心詢問。" },
+    nodata: { lv:"alarm", title:"收音中斷！", sub:"麥克風沒有傳回訊號，正在自動重新連線…", rec:true, thumb:"img", audio:"none",
+              chips:[["alarm","收音 中斷"],["ok","畫面 正常"],["ok","錄影中"]], cap:"麥克風線鬆脫或 USB 被拔掉時，整個視窗閃紅並發出提示音。" },
+    black:  { lv:"alarm", title:"錄影畫面全黑！", sub:"鏡頭可能被遮住、拔除或沒有訊號", rec:true, thumb:"black", audio:"talk",
+              chips:[["ok","收音 正常"],["alarm","畫面 全黑"],["ok","錄影中"]], cap:"錄影預覽變成全黑或無訊號畫面時，立刻提醒。" },
+    voice:  { lv:"warn",  title:"有人說話，但沒有在錄影", sub:"請確認是否已按下錄影", rec:false, thumb:"img", audio:"talk",
+              chips:[["ok","收音 正常"],["ok","畫面 正常"],["warn","錄影 未開始"]], cap:"麥克風聽到說話，卻沒有錄影檔在寫入，就會提醒你按錄影。" }
+  };
+  var LV = { ok:C.green, warn:C.amber, alarm:C.red, off:C.faint };
+  var cur = "ok", auto = !reduce, order = ["ok","nodata","ok","black","ok","voice"], oi = 0, lastSwitch = performance.now();
+  var hist = []; for (var i=0;i<240;i++) hist.push(0.3);
+  var thumbImg = new Image(); thumbImg.src = "assets/thumb.png";
+  var recStart = Date.now() - (18*60+42)*1000, lastPush = 0, speech = 0, speechT = 0;
+
+  function S(v){ return v*K; }
+  function rr(x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+  function font(pt,w){ return (w||400)+" "+(pt*96/72)+"px 'Noto Sans TC','Noto Sans CJK TC','Microsoft JhengHei',sans-serif"; }
+  function alpha(hex,a){ var n=parseInt(hex.slice(1),16); return "rgba("+(n>>16)+","+(n>>8&255)+","+(n&255)+","+a+")"; }
+  function ellipsis(t,maxW){ if (g.measureText(t).width<=maxW) return t; while(t.length>1 && g.measureText(t+"…").width>maxW) t=t.slice(0,-1); return t+"…"; }
+
+  function sample(st, now){
+    if (now - lastPush < 50) return;
+    lastPush = now;
+    if (st.audio === "none") { hist.push(-1); }
+    else {
+      if (now > speechT) { speech = Math.random() < 0.7 ? 0.45 + Math.random()*0.4 : 0.08; speechT = now + 250 + Math.random()*700; }
+      hist.push(Math.max(0.03, Math.min(1, speech * (0.55 + Math.random()*0.6))));
+    }
+    if (hist.length > 240) hist.shift();
+  }
+
+  function draw(now){
+    var st = STATES[cur], t = now/1000, W = 304, H = 134, acc = LV[st.lv];
+    if (!reduce) sample(st, now);
+    g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,cv.width,cv.height); g.setTransform(K,0,0,K,0,0);
+    g.fillStyle = C.bg; rr(0,0,W,H,8); g.fill();
+    if (st.lv === "alarm") { g.fillStyle = "rgba(220,38,38,"+((38+34*Math.sin(t*6))/255).toFixed(3)+")"; rr(0,0,W,H,8); g.fill(); }
+
+    // status dot
+    var p = 0.5+0.5*Math.sin(t*(st.lv==="alarm"?7:2.2)), r = 4.5, gr = r+2.5+3.5*p;
+    g.fillStyle = alpha(acc,(40+50*p)/255); g.beginPath(); g.arc(20,21,gr,0,7); g.fill();
+    g.fillStyle = acc; g.beginPath(); g.arc(20,21,r,0,7); g.fill();
+
+    // REC pill
+    g.textBaseline = "middle";
+    var pillR = W-34, pillText, pw, px;
+    if (st.rec) {
+      var d = Math.floor((Date.now()-recStart)/1000);
+      pillText = "REC " + [Math.floor(d/3600), Math.floor(d/60)%60, d%60].map(function(n){ return (n<10?"0":"")+n; }).join(":");
+      g.font = "700 "+(8*96/72)+"px 'Segoe UI',Arial,sans-serif";
+      pw = g.measureText(pillText).width + 11 + 10; px = pillR - pw;
+      g.fillStyle = C.rec; rr(px,12,pw,19,9.5); g.fill();
+      g.fillStyle = "rgba(255,255,255,"+((140+115*(0.5+0.5*Math.sin(t*4)))/255).toFixed(3)+")";
+      g.beginPath(); g.arc(px+9,21.5,3.2,0,7); g.fill();
+      g.fillStyle = "#fff"; g.fillText(pillText, px+16, 22);
+    } else {
+      g.font = font(8); pillText = "未錄影"; pw = g.measureText(pillText).width + 12; px = pillR - pw;
+      g.fillStyle = "#282D36"; rr(px,12,pw,19,9.5); g.fill(); g.fillStyle = C.dim; g.fillText(pillText, px+6, 22);
+    }
+    // menu dots
+    g.fillStyle = C.dim; for (var i=0;i<3;i++){ g.beginPath(); g.arc(W-27+5*i+1.5,21.5,1.5,0,7); g.fill(); }
+    // title & sub
+    g.font = font(10.5,700); g.fillStyle = st.lv==="ok" ? C.text : acc; g.fillText(ellipsis(st.title, px-40), 34, 22);
+    g.font = font(8.5); g.fillStyle = st.lv==="ok" ? C.dim : alpha(acc,.9); g.fillText(ellipsis(st.sub, W-28), 14, 42);
+
+    // thumb
+    g.save(); rr(14,58,71,40,6); g.clip();
+    if (st.thumb === "black") { g.fillStyle = "#040406"; g.fillRect(14,58,71,40); }
+    else if (thumbImg.complete) g.drawImage(thumbImg,14,58,71,40);
+    g.restore();
+    if (st.thumb === "black") { g.font = font(8); g.fillStyle = C.red; g.textAlign="center"; g.fillText("全黑", 49.5, 78); g.textAlign="left"; }
+    g.lineWidth = st.thumb==="black" ? 1.5 : 1; g.strokeStyle = st.thumb==="black" ? C.red : "rgba(52,211,153,.45)"; rr(14,58,71,40,6); g.stroke();
+
+    // wave
+    var wx = 93, ww = W-14-11-wx;
+    g.fillStyle = C.panel; rr(wx,58,ww,40,6); g.fill();
+    var ix = wx+6, iw = ww-12, mid = 78, half = 16, bw = 2, gp = 1.6, n = Math.floor((iw+gp)/(bw+gp)), x0 = ix+iw-(n*(bw+gp)-gp);
+    var wc = st.audio==="none" ? C.red : C.green;
+    g.fillStyle = alpha(wc,.16); g.fillRect(ix,mid-.5,iw,1);
+    for (i=0;i<n;i++){
+      var v = hist[hist.length-n+i], a = (70+185*i/(n-1))/255, x = x0+i*(bw+gp);
+      if (v < 0) { g.fillStyle = alpha(C.red,a); g.fillRect(x,mid-.75,bw,1.5); continue; }
+      var h = Math.max(1.5, v*half); g.fillStyle = alpha(C.green,a); g.fillRect(x,mid-h,bw,h*2);
+    }
+    // meter
+    var mx = W-20; g.fillStyle = C.panel; rr(mx,58,6,40,3); g.fill();
+    var last = hist[hist.length-1], m = last<0 ? 0 : Math.min(1,last*1.05);
+    if (m > .05) { g.fillStyle = C.green; rr(mx,98-m*40,6,m*40,3); g.fill(); }
+
+    // chips: 左貼左、右貼右、中間等距
+    g.font = font(8); var ws = st.chips.map(function(c){ return 9 + g.measureText(c[1]).width; });
+    var gap = (W-28-ws[0]-ws[1]-ws[2])/2, cx = 14;
+    st.chips.forEach(function(c,k){
+      var col = LV[c[0]]; g.fillStyle = col; g.beginPath(); g.arc(cx+2.6,114,2.6,0,7); g.fill();
+      g.fillStyle = c[0]==="ok" ? C.dim : col; g.fillText(c[1], cx+9, 114.5); cx += ws[k]+gap;
+    });
+
+    // border
+    g.lineWidth = st.lv==="alarm" ? 2 : 1;
+    g.strokeStyle = st.lv==="ok" ? C.border : alpha(acc, st.lv==="alarm" ? .9 : .65);
+    var o = g.lineWidth/2; rr(o,o,W-2*o,H-2*o,8); g.stroke();
+  }
+
+  function setState(s, byUser){
+    cur = s; if (byUser) auto = false;
+    $("cap").textContent = STATES[s].cap;
+    document.querySelectorAll(".demo-switch button").forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.s===s ? "true" : "false"); });
+  }
+  document.querySelectorAll(".demo-switch button").forEach(function(b){ b.addEventListener("click", function(){ setState(b.dataset.s, true); if (reduce) draw(performance.now()); }); });
+
+  function loop(now){
+    if (auto && now - lastSwitch > (cur==="ok" ? 6000 : 4200)) { oi = (oi+1) % order.length; setState(order[oi]); lastSwitch = now; }
+    draw(now); requestAnimationFrame(loop);
+  }
+  setState("ok");
+  if (reduce) { for (var j=0;j<240;j++) hist[j] = 0.25 + 0.35*Math.abs(Math.sin(j/5)); thumbImg.onload = function(){ draw(0); }; draw(0); }
+  else { document.fonts && document.fonts.ready.then(function(){}); requestAnimationFrame(loop); }
+})();
+</script>
+</body>
+</html>

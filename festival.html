@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AudioWatch 節慶動畫預覽</title>
+<meta name="description" content="AudioWatch 七個節日的小視窗動畫，可切換活潑程度、點擊互動。">
+<link rel="icon" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+<style>
+/* 版面：左邊是會動的小視窗與操控按鈕，右邊是這個節日的動畫解說；手機改上下排列 */
+:root{
+  --bg:#F5F6F8; --surface:#FFFFFF; --ink:#18202C; --ink-2:#3B4453; --muted:#666F7D; --line:#DADEE4;
+  --go:#14895F; --chip:#EEF1F4; --chip-on:#18202C; --chip-on-fg:#FFFFFF; --desk:#1A1F27;
+  --serif:"Noto Serif TC","Noto Serif CJK TC","PMingLiU",serif;
+  --sans:"Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12161C; --surface:#1A1F27; --ink:#ECEFF3; --ink-2:#C9CFD8; --muted:#9AA3B0; --line:#2E3540;
+  --go:#3CC796; --chip:#232A34; --chip-on:#ECEFF3; --chip-on-fg:#12161C; --desk:#0D1015; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#12161C; --surface:#1A1F27; --ink:#ECEFF3; --ink-2:#C9CFD8; --muted:#9AA3B0; --line:#2E3540;
+  --go:#3CC796; --chip:#232A34; --chip-on:#ECEFF3; --chip-on-fg:#12161C; --desk:#0D1015; color-scheme:dark }
+*{box-sizing:border-box}
+body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 15.5px/1.75 var(--sans)}
+.page{max-width:1120px;margin:0 auto;padding-block:32px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font:900 clamp(26px,3.6vw,36px)/1.3 var(--serif);margin:0 0 8px;text-wrap:balance}
+h2{font:900 22px/1.4 var(--serif);margin:0 0 4px;text-wrap:balance}
+h3{font:700 15.5px/1.5 var(--sans);margin:0 0 2px}
+p{margin:0 0 10px}
+.lead{color:var(--ink-2);max-width:44em}
+.muted{color:var(--muted)}
+
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 18px}
+.tabs button,.seg button,.act button{font:500 14px/1 var(--sans);border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:999px;padding:9px 14px;cursor:pointer}
+.tabs button[aria-pressed="true"],.seg button[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-fg);border-color:var(--chip-on)}
+button:focus-visible{outline:3px solid var(--go);outline-offset:2px}
+
+.stage{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:28px;align-items:start}
+.desk{background:var(--desk);border-radius:20px;padding:26px 20px 20px}
+canvas{display:block;width:100%;max-width:608px;height:auto;margin:0 auto;cursor:pointer;touch-action:manipulation}
+.hint{color:#9AA3AF;font-size:13px;text-align:center;margin:12px 0 0}
+.ctrl{margin-top:16px;display:grid;gap:12px}
+.ctrl .lbl{font-size:13px;color:var(--muted);margin-bottom:6px}
+.seg,.act{display:flex;flex-wrap:wrap;gap:8px}
+.act button{background:var(--surface)}
+
+.explain{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 24px;min-width:0}
+.explain .period{font-size:14px;color:var(--muted);margin-bottom:14px}
+.beats{list-style:none;margin:0;padding:0;display:grid;gap:16px}
+.beats li{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px}
+.beats .k{font:700 13px/1.9 var(--sans);color:var(--go)}
+.beats p{margin:0;color:var(--ink-2)}
+.idea{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+
+.rules{margin-top:40px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.rules > div{min-width:0}
+.rules p{color:var(--ink-2);font-size:14.5px}
+.levels{margin-top:36px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:700;color:var(--muted);font-size:13px}
+td:first-child{font-weight:700;white-space:nowrap}
+
+@media (max-width:880px){ .stage{grid-template-columns:1fr} .rules{grid-template-columns:1fr} }
+@media (max-width:480px){ .desk{padding:16px 10px 14px;border-radius:14px} .explain{padding:18px} .beats li{grid-template-columns:1fr;gap:0} }
+</style>
+</head>
+<body>
+<div class="page">
+  <p style="margin:0 0 18px"><a href="./" style="color:var(--go);font-weight:500">回到 AudioWatch 介紹</a></p>
+  <h1>AudioWatch 節慶動畫預覽</h1>
+  <p class="lead">每個節日的動畫分成四段：打開時的登場、平常的背景動態、點一下會發生的小驚喜，以及只在特定時刻出現的彩蛋。可以切換活潑程度、模擬開始錄影、筆錄結束或收音中斷，直接看實際效果。</p>
+
+  <div class="tabs" role="group" aria-label="選擇節日" id="tabs"></div>
+
+  <div class="stage">
+    <div>
+      <div class="desk">
+        <canvas id="cv" width="608" height="344" role="img" aria-label="節慶主題的小視窗動畫"></canvas>
+        <p class="hint">點小視窗任何地方，試試互動小驚喜</p>
+      </div>
+      <div class="ctrl">
+        <div>
+          <div class="lbl">活潑程度</div>
+          <div class="seg" role="group" aria-label="活潑程度" id="levels">
+            <button type="button" data-l="0">含蓄</button>
+            <button type="button" data-l="1">標準</button>
+            <button type="button" data-l="2" aria-pressed="true">活潑</button>
+          </div>
+        </div>
+        <div>
+          <div class="lbl">模擬情境</div>
+          <div class="act">
+            <button type="button" id="bReplay">重播登場</button>
+            <button type="button" id="bRec">開始錄影</button>
+            <button type="button" id="bDone">筆錄結束</button>
+            <button type="button" id="bSpecial">特別時刻</button>
+            <button type="button" id="bAlarm">收音中斷</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="explain" aria-live="polite">
+      <h2 id="xName"></h2>
+      <div class="period" id="xPeriod"></div>
+      <ul class="beats" id="xBeats"></ul>
+      <div class="idea" id="xIdea"></div>
+    </div>
+  </div>
+
+  <div class="levels">
+    <h2 style="margin-bottom:10px">三種活潑程度的差別</h2>
+    <table>
+      <tr><th>程度</th><th>登場</th><th>背景動態</th><th>點一下</th><th>開始錄影／筆錄結束</th></tr>
+      <tr><td>含蓄</td><td>橫幅滑入，沒有特效</td><td>只有靜態浮水印</td><td>關閉</td><td>只有文字提示</td></tr>
+      <tr><td>標準</td><td>橫幅＋一段短特效</td><td>慢速、少量，像背景呼吸</td><td>開啟</td><td>小型慶祝特效</td></tr>
+      <tr><td>活潑</td><td>完整登場秀</td><td>粒子較多、事件較頻繁，偶爾飄到前景</td><td>開啟</td><td>完整慶祝特效</td></tr>
+    </table>
+  </div>
+
+  <div class="rules">
+    <div><h3>警示永遠優先</h3><p>只要變成黃燈或紅燈，浮水印、橫幅、動畫會立刻全部收起，畫面恢復成純警示。按「收音中斷」可以看到效果。</p></div>
+    <div><h3>不搶工作的注意力</h3><p>背景動態都畫在空白處，透明度低，不蓋住文字與音波。橫幅每天只跳一次，8 秒後自動收起。</p></div>
+    <div><h3>想關就關</h3><p>右鍵選單可以選活潑程度或完全關閉節慶效果。動畫很輕量，不會讓電腦變慢，也不影響錄影軟體。</p></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var cv=document.getElementById("cv"), g=cv.getContext("2d");
+var K=2, W=304, BH=30, H=134, CH=BH+H;            // 邏輯尺寸：橫幅 30 + 小視窗 134
+var reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+var C={bg:"#14171D",panel:"#1D2129",border:"#343A44",text:"#ECEEF1",dim:"#969DA8",faint:"#606772",green:"#34D399",amber:"#FBBF24",red:"#F87171",rec:"#DC2626"};
+function F(pt,w){return (w||400)+" "+(pt*96/72)+"px 'Noto Sans TC','Noto Sans CJK TC','Microsoft JhengHei',sans-serif";}
+function rr(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+function rgba(h,a){var n=parseInt(h.slice(1),16);return "rgba("+(n>>16)+","+(n>>8&255)+","+(n&255)+","+(+a).toFixed(3)+")";}
+function rand(a,b){return a+Math.random()*(b-a);}
+function ease(t){return 1-Math.pow(1-t,3);}
+function back(t){var c=1.7;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);}
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+var YEAR=new Date().getFullYear()+1;
+
+/* ===================== 節日資料與解說 ===================== */
+var TH={
+ cny:{tab:"春節",name:"新春快樂",greet:"恭賀新禧，萬事如意",bg:"#C42828",fg:"#FFD666",period:"農曆小年夜～初五（2027 年是 2/4～2/10）",
+  beats:[["登場","橫幅從上方滑下，一串鞭炮由右往左依序炸開，噴出紅色和金色火花，大約 2 秒。"],
+         ["背景","三盞紅燈籠在上緣隨風擺動、金色星光閃爍。下方是一座傳統三合院，家族成員在院子前走來走去，有長輩、大人和小孩，走一走會停下來，再換方向。"],
+         ["點一下","點的地方掉下一個紅包，翻轉著落下，輪流冒出「好運 +1」「發財 +1」「健康 +1」「暴富 +1」「賺大錢 +1」。"],
+         ["開始錄影","REC 亮起的瞬間，從 REC 標籤噴出一小把金幣。"],
+         ["特別時刻","除夕晚上 8 點後，三合院上空偶爾放一朵小煙火，陪值班同仁守歲。"]],
+  idea:"情緒價值：三合院和一家人走來走去，就是過年回家的畫面。"},
+ dbf:{tab:"端午",name:"端午節快樂",greet:"粽子飄香，平安順心",bg:"#1F7A52",fg:"#E3F5D8",period:"端午節前 5 天～當天（2027 年是 6/4～6/9）",
+  beats:[["登場","紅龍舟和青龍舟一前一後划過橫幅，速度差不多，像在比賽，後面留下水波紋。"],
+         ["背景","底部兩道水波緩慢起伏；三顆小粽子在右上角浮動。每隔一段時間，兩艘龍舟一前一後從底部划過，偶爾會互相超前。"],
+         ["點一下","點的地方蹦出一顆粽子，跳出「包中！」，取包粽、包中的好兆頭。"],
+         ["開始錄影","兩艘龍舟像比賽開跑一樣快速划過一趟。"],
+         ["特別時刻","端午當天中午 11 點到 1 點，背景有一顆雞蛋慢慢立起來，旁邊寫「立蛋成功」。"]],
+  idea:"情緒價值：兩艘龍舟互相追趕，每次划過誰領先都不一定。"},
+ moon:{tab:"中秋",name:"中秋節快樂",greet:"月圓人團圓",bg:"#26306A",fg:"#F7DF8E",period:"中秋節前 1 天～當天（2027 年是 9/14～9/15）",
+  beats:[["登場","滿月從右下角緩緩升到右上角，亮起一圈柔和光暈。"],
+         ["背景","月亮光暈像呼吸一樣明暗；小星星閃爍；每隔一段時間，一隻玉兔蹦蹦跳跳穿過底部。"],
+         ["點一下","三段輪流出現：玉兔跳出來戴好柚子帽「柚子帽戴好了」；烤肉串冒出香味「每年的大事！我要烤肉」；蛋黃酥被切開露出蛋黃「少不了好吃的蛋黃酥」。"],
+         ["開始錄影","一顆流星劃過月亮。"],
+         ["特別時刻","中秋晚上 6 點後，底部飄來淡淡的烤肉煙，玉兔改拿著烤肉串跳過去。"]],
+  idea:"情緒價值：柚子帽、烤肉、蛋黃酥，都是台灣中秋才有的回憶。"},
+ double10:{tab:"國慶",name:"國慶日快樂",greet:"雙十國慶",bg:"#B21E2A",fg:"#FFFFFF",period:"10/9～10/10",
+  beats:[["登場","三發煙火依序升空，在橫幅後方綻放成紅、白、藍三色。"],
+         ["背景","一面國旗在背景隨風飄揚；每隔一段時間，一架戰機劃過天空，拉出紅、白、藍三道彩煙，彩煙慢慢散開；偶爾放一朵小煙火。"],
+         ["點一下","在你點的位置立刻放一朵煙火。"],
+         ["開始錄影","戰機立刻飛過一趟，拉出三色彩煙。"],
+         ["特別時刻","10/10 晚上 8 點後，煙火變成連發，像國慶煙火秀。"]],
+  idea:"情緒價值：國旗加戰機拉煙，是國慶最有臨場感的畫面。"},
+ xmas:{tab:"聖誕",name:"聖誕節快樂",greet:"Merry Christmas",bg:"#1A6E46",fg:"#FFFFFF",period:"12/18～12/25（今年最近的一個）",
+  beats:[["登場","雪從上方落下，在橫幅頂端積成一層白白的雪蓋。"],
+         ["背景","雪花持續飄落，在底部慢慢積成雪地；聖誕樹立在雪地上，燈泡輪流閃爍。每隔一段時間，聖誕老公公駕著麋鹿雪橇飛過天空。"],
+         ["點一下","點的地方彈出一個禮物盒，蓋子打開冒出星星和「叮噹～」。"],
+         ["開始錄影","聖誕樹頂端的星星亮一下，灑下一把亮粉。"],
+         ["特別時刻","12/24 晚上 6 點後，雪橇飛過時會沿路丟下禮物。"]],
+  idea:"情緒價值：積雪會越積越厚，聖誕樹就站在雪地上。"},
+ newyear:{tab:"元旦",name:"新年快樂",greet:"Happy New Year "+YEAR,bg:"#2B2E44",fg:"#FFD666",period:"1/1 當天；跨年倒數從 12/31 23:50 開始",
+  beats:[["登場","橫幅先倒數「3…2…1…」，接著「新年快樂」彈出，兩側噴出彩帶紙片。"],
+         ["背景","彩色紙片旋轉飄落；背景的年份大字每隔一陣子亮一下。"],
+         ["點一下","點的地方噴出一把彩帶紙片。"],
+         ["開始錄影","兩側各噴一小把彩帶。"],
+         ["跨年倒數","12/31 23:50 起，橫幅顯示跨年倒數計時。最後 10 秒，超大的 10、9、8…1 旋轉放大，噴滿整個視窗，像跨年直播；0 秒時年份炸開、煙火和彩帶齊放。按「特別時刻」可以看最後 15 秒。"]],
+  idea:"情緒價值：跨年夜值班的同仁，在座位上也有自己的跨年倒數。"},
+ police:{tab:"警察節",name:"警察節快樂",greet:"辛苦了，向每一位警察同仁致敬",bg:"#1C3A82",fg:"#FAD25A",period:"6/12～6/15",
+  beats:[["登場","警徽滑入，一道金屬光澤從左到右掃過。"],
+         ["背景","下方路邊有男警、女警和一台警車，警察揮手指揮交通，警車燈紅藍閃爍；金色星星閃爍、警徽定時反光。"],
+         ["點一下","輪流跳出打氣的話。點警車會上演一段抓人短劇：警察押著戴手銬、穿黑白條紋囚服的犯人走上警車，警車開走後再開回來。"],
+         ["開始錄影","警徽亮起一圈金光。錄影中不播抓人短劇，避免被受詢問人看到產生誤會。"],
+         ["特別時刻","6/15 當天，筆錄結束的「辛苦了」訊息改成警察節特別版。"]],
+  idea:"情緒價值：警察節是最貼近使用者身分的節日，抓人短劇是給同仁的會心一笑。"}
+};
+var ORDER=["cny","dbf","moon","double10","xmas","newyear","police"];
+var MSGS=["今天也要平安下班","記得喝水休息一下","你的認真，大家都看得見","謝謝你守護這座城市","辛苦了，向你敬禮"];
+var LUCK=["好運 +1","發財 +1","健康 +1","暴富 +1","賺大錢 +1"];
+
+/* ===================== 狀態 ===================== */
+var theme="cny", level=2, alarm=false, rec=true, special=false;
+var bannerT=0, entranceT=0, recStart=Date.now()-(18*60+42)*1000, done=null, msgI=0, luckI=0, moonI=0;
+var P=[], hist=[];for(var i=0;i<240;i++)hist.push(.3);
+var lastPush=0,speech=.5,speechT=0,snowLine=0,rabbitT=-1e9,fwT=0,boatT=-1e9,glintT=0,yearT=0,eggT=0,sleighT=-1e9,jetT=-1e9,arrestT=-1e9,cdT=-1e9;
+var moonProp=null, folks=[], trails=[], lastNow=0, yearFired=false, cnyK=-1, d10=[false,false,false], giftDrop=0;
+
+function lvl(a,b,c){return [a,b,c][level];}
+function add(p){P.push(p);}
+function burst(x,y,cols,n,spd,layer){for(var i=0;i<n;i++){var a=rand(0,Math.PI*2),s=rand(.3,1)*spd;add({k:"spark",x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,g:.035,life:0,max:rand(50,80),c:cols[i%cols.length],r:rand(1,1.8),L:layer||"b"});}}
+function confetti(x,y,n,dir,spd){var cols=["#FBBF24","#F472B6","#60A5FA","#34D399","#F87171","#FFFFFF"];spd=spd||1;for(var i=0;i<n;i++){add({k:"conf",x:x,y:y,vx:((dir||rand(-1,1))*rand(.5,2.6)+rand(-.6,.6))*spd,vy:rand(-3.2,-1)*spd,g:.06,life:0,max:rand(90,150),c:cols[i%6],rot:rand(0,6),vr:rand(-.25,.25),r:rand(2,3.2),L:"f"});}}
+function floatText(x,y,t,c){x=clamp(x,58,W-58);add({k:"text",x:x,y:y,vx:0,vy:-.35,g:0,life:0,max:120,t:t,c:c||"#FFFFFF",L:"f"});}
+function rocket(x,cols,big){add({k:"rocket",x:x,y:H-4,vx:rand(-.2,.2),vy:-rand(3.1,3.8),g:.045,life:0,max:200,c:cols[0],cols:cols,big:big,L:"b"});}
+function snowflake(anyY){return {k:"snow",x:rand(0,W),y:anyY?rand(0,H):-4,vx:rand(-.15,.15),vy:rand(.18,.45)*lvl(1,.8,1.2),g:0,life:0,max:1e9,r:rand(.8,2),ph:rand(0,6),L:Math.random()<lvl(0,0,.25)?"f":"b"};}
+function fallConf(anyY){var cols=["#FBBF24","#F472B6","#60A5FA","#34D399","#F87171"];return {k:"conf",x:rand(0,W),y:anyY?rand(0,H):-4,vx:rand(-.2,.2),vy:rand(.25,.5),g:0,life:0,max:1e9,c:cols[(Math.random()*5)|0],rot:rand(0,6),vr:rand(-.06,.06),r:rand(1.6,2.6),L:"b",drift:true};}
+
+function makeFolks(){folks=[];var cols=["#C9473F","#3F6FB5","#D9A441","#5E8F5A","#8C5BA8","#D46A8A"];
+  [[1,"elder"],[1,"adult"],[1,"adult"],[.72,"kid"],[.72,"kid"],[1,"adult"]].forEach(function(f,i){folks.push({x:rand(96,262),dir:Math.random()<.5?-1:1,sp:rand(.12,.24)*(f[0]<1?1.3:1),s:f[0],kind:f[1],c:cols[i],ph:rand(0,6),pause:0});});}
+function reset(){P=[];trails=[];snowLine=0;bannerT=performance.now();entranceT=bannerT;rabbitT=-1e9;boatT=-1e9;fwT=0;glintT=bannerT;yearT=bannerT;sleighT=-1e9;jetT=bannerT-4000;arrestT=-1e9;cdT=-1e9;moonProp=null;giftDrop=0;
+  makeFolks();
+  if(theme==="xmas")for(var i=0;i<lvl(0,18,40);i++)add(snowflake(true));
+  if(theme==="newyear")for(i=0;i<lvl(0,6,14);i++)add(fallConf(true));
+}
+
+/* ===================== 小視窗內容（座標以小視窗左上為 0,0） ===================== */
+function drawThumb(x,y,w,h){
+  g.save();rr(x,y,w,h,6);g.clip();var gr=g.createLinearGradient(0,y,0,y+h);gr.addColorStop(0,"#5C6068");gr.addColorStop(1,"#474B52");g.fillStyle=gr;g.fillRect(x,y,w,h);
+  g.fillStyle="#3A342E";g.fillRect(x,y+h*.68,w,h*.32);
+  [[.3,"#283446"],[.72,"#3C302C"]].forEach(function(p){var cx=x+w*p[0];g.fillStyle="#C4A084";g.beginPath();g.ellipse(cx,y+h*.34,w*.07,h*.12,0,0,7);g.fill();g.fillStyle=p[1];rr(cx-w*.14,y+h*.44,w*.28,h*.36,6);g.fill();});
+  g.restore();g.strokeStyle="rgba(52,211,153,.45)";g.lineWidth=1;rr(x,y,w,h,6);g.stroke();}
+function sample(now){if(now-lastPush<50)return;lastPush=now;
+  if(alarm)hist.push(-1);else{if(now>speechT){speech=Math.random()<.7?rand(.45,.85):.08;speechT=now+rand(250,950);}hist.push(Math.max(.03,Math.min(1,speech*rand(.55,1.15))));}
+  if(hist.length>240)hist.shift();}
+function drawCard(now,t){
+  var acc=alarm?C.red:C.green;
+  g.fillStyle=C.bg;g.fillRect(0,0,W,H);
+  if(alarm){g.fillStyle="rgba(220,38,38,"+((38+34*Math.sin(t*6))/255).toFixed(3)+")";g.fillRect(0,0,W,H);}
+  if(!alarm){g.save();g.beginPath();g.rect(0,0,W,H);g.clip();drawThemeBack(now,t);drawParticles("b");g.restore();}
+  var p=.5+.5*Math.sin(t*(alarm?7:2.2)),r=4.5,gr=r+2.5+3.5*p;
+  g.fillStyle=rgba(acc,(40+50*p)/255);g.beginPath();g.arc(20,21,gr,0,7);g.fill();g.fillStyle=acc;g.beginPath();g.arc(20,21,r,0,7);g.fill();
+  g.textBaseline="middle";var px,pw,tx;
+  if(rec){var d=Math.floor((Date.now()-recStart)/1000);tx="REC "+[Math.floor(d/3600),Math.floor(d/60)%60,d%60].map(function(n){return(n<10?"0":"")+n;}).join(":");
+    g.font="700 "+(8*96/72)+"px 'Segoe UI',Arial,sans-serif";pw=g.measureText(tx).width+21;px=W-34-pw;
+    g.fillStyle=C.rec;rr(px,12,pw,19,9.5);g.fill();g.fillStyle="rgba(255,255,255,"+((140+115*(.5+.5*Math.sin(t*4)))/255).toFixed(3)+")";g.beginPath();g.arc(px+9,21.5,3.2,0,7);g.fill();g.fillStyle="#fff";g.fillText(tx,px+16,22);}
+  else{g.font=F(8);tx="未錄影";pw=g.measureText(tx).width+12;px=W-34-pw;g.fillStyle="#282D36";rr(px,12,pw,19,9.5);g.fill();g.fillStyle=C.dim;g.fillText(tx,px+6,22);}
+  g.fillStyle=C.dim;for(var i=0;i<3;i++){g.beginPath();g.arc(W-27+5*i+1.5,21.5,1.5,0,7);g.fill();}
+  var title=alarm?"收音中斷！":(done?"辛苦了！":"全部正常"), sub=alarm?"麥克風沒有傳回訊號，正在自動重新連線…":(done?done:"錄影檔：20261019_102341.mp4　1.24 GB");
+  g.font=F(10.5,700);g.fillStyle=alarm?C.red:C.text;g.fillText(title,34,22);
+  g.font=F(8.5);g.fillStyle=alarm?rgba(C.red,.9):(done?C.green:C.dim);g.fillText(sub,14,42);
+  drawThumb(14,58,71,40);
+  var wx=93,ww=W-14-11-wx;g.fillStyle=alarm?C.panel:"rgba(29,33,41,.78)";rr(wx,58,ww,40,6);g.fill();
+  var ix=wx+6,iw=ww-12,mid=78,n=Math.floor((iw+1.6)/3.6),x0=ix+iw-(n*3.6-1.6);
+  for(i=0;i<n;i++){var v=hist[hist.length-n+i],a=(70+185*i/(n-1))/255,x=x0+i*3.6;
+    if(v<0){g.fillStyle=rgba(C.red,a);g.fillRect(x,mid-.75,2,1.5);continue;}var hh=Math.max(1.5,v*16);g.fillStyle=rgba(C.green,a);g.fillRect(x,mid-hh,2,hh*2);}
+  var mx=W-20;g.fillStyle=C.panel;rr(mx,58,6,40,3);g.fill();var last=hist[hist.length-1],m=last<0?0:Math.min(1,last);if(m>.05){g.fillStyle=C.green;rr(mx,98-m*40,6,m*40,3);g.fill();}
+  var chips=alarm?[["al","收音 中斷"],["ok","畫面 正常"],["ok","錄影中"]]:[["ok","收音 正常"],["ok","畫面 正常"],[rec?"ok":"off",rec?"錄影中":"未錄影"]];
+  g.font=F(8);var ws=chips.map(function(c){return 9+g.measureText(c[1]).width;}),gap=(W-28-ws[0]-ws[1]-ws[2])/2,cx=14;
+  chips.forEach(function(c,k){var col=c[0]==="al"?C.red:(c[0]==="off"?C.faint:C.green);g.fillStyle=col;g.beginPath();g.arc(cx+2.6,114,2.6,0,7);g.fill();g.fillStyle=c[0]==="al"?C.red:(c[0]==="off"?C.faint:C.dim);g.fillText(c[1],cx+9,114.5);cx+=ws[k]+gap;});
+  if(!alarm&&theme==="xmas"&&snowLine>0){g.fillStyle="rgba(240,246,255,.9)";g.beginPath();g.moveTo(0,H);for(var sx=0;sx<=W;sx+=8)g.lineTo(sx,H-snowLine*(.75+.25*Math.sin(sx*.13)));g.lineTo(W,H);g.closePath();g.fill();}
+}
+
+/* ===================== 圖形元件 ===================== */
+function star4(x,y,r,a,c){g.save();g.globalAlpha=a;g.fillStyle=c;g.beginPath();g.moveTo(x,y-r);g.quadraticCurveTo(x,y,x+r,y);g.quadraticCurveTo(x,y,x,y+r);g.quadraticCurveTo(x,y,x-r,y);g.quadraticCurveTo(x,y,x,y-r);g.fill();g.restore();}
+var STARS=[];for(var s0=0;s0<16;s0++)STARS.push([rand(10,W-10),rand(6,H-8),rand(0,6),rand(1.6,3)]);
+function lantern(cx,len,s,ang,alpha){g.save();g.translate(cx,0);g.rotate(ang);g.globalAlpha=alpha;var y=len;
+  g.strokeStyle="#E8B04A";g.lineWidth=1;g.beginPath();g.moveTo(0,0);g.lineTo(0,y-s*.8);g.stroke();g.fillStyle="#E8B04A";g.fillRect(-s*.45,y-s*.85,s*.9,s*.18);g.fillRect(-s*.45,y+s*.67,s*.9,s*.18);
+  var gr=g.createRadialGradient(-s*.2,y-s*.2,s*.1,0,y,s*.8);gr.addColorStop(0,"#FF6B5A");gr.addColorStop(1,"#C21F1F");g.fillStyle=gr;g.beginPath();g.ellipse(0,y,s*.78,s*.72,0,0,7);g.fill();
+  g.strokeStyle="#E8B04A";for(var k=-1;k<=1;k++){g.beginPath();g.moveTo(k*s*.2,y+s*.85);g.lineTo(k*s*.2+Math.sin(ang*3)*2,y+s*1.35);g.stroke();}g.restore();}
+function sanheyuan(cx,gy,a){g.save();g.globalAlpha=a;
+  // 左右護龍
+  [[-1],[1]].forEach(function(s){var x=cx+s[0]*44;g.fillStyle="#A8473A";g.fillRect(x-14,gy-14,28,14);g.fillStyle="#3B3B44";g.beginPath();g.moveTo(x-17,gy-14);g.lineTo(x+17,gy-14);g.lineTo(x+13,gy-19);g.lineTo(x-13,gy-19);g.closePath();g.fill();g.fillStyle="#2A1E1A";g.fillRect(x-3,gy-9,6,9);});
+  // 正身
+  g.fillStyle="#B9503F";g.fillRect(cx-26,gy-20,52,20);g.fillStyle="#2A1E1A";g.fillRect(cx-5,gy-13,10,13);g.fillStyle="#E7C46A";g.fillRect(cx-16,gy-14,6,6);g.fillRect(cx+10,gy-14,6,6);
+  g.fillStyle="#3B3B44";g.beginPath();g.moveTo(cx-31,gy-20);g.lineTo(cx+31,gy-20);g.lineTo(cx+26,gy-27);g.lineTo(cx-26,gy-27);g.closePath();g.fill();
+  g.strokeStyle="#3B3B44";g.lineWidth=1.6;g.beginPath();g.moveTo(cx-26,gy-27);g.quadraticCurveTo(cx-31,gy-28,cx-33,gy-32);g.moveTo(cx+26,gy-27);g.quadraticCurveTo(cx+31,gy-28,cx+33,gy-32);g.stroke();
+  g.fillStyle="#D9302C";g.fillRect(cx-7,gy-11,2.5,7);g.fillRect(cx+4.5,gy-11,2.5,7);
+  g.fillStyle="#8F7B63";g.fillRect(cx-70,gy-1,140,1.5);g.restore();}
+function person(x,gy,s,c,kind,walk,a,dir){g.save();g.globalAlpha=a;g.translate(x,gy);g.scale(dir||1,1);var hgt=16*s,leg=Math.sin(walk)*2.2*s;
+  g.strokeStyle="#2B2B33";g.lineWidth=1.6*s;g.beginPath();g.moveTo(0,-hgt*.36);g.lineTo(-leg,0);g.moveTo(0,-hgt*.36);g.lineTo(leg,0);g.stroke();
+  g.fillStyle=c;rr(-3.2*s,-hgt*.8,6.4*s,hgt*.48,2*s);g.fill();
+  g.fillStyle="#E9C2A0";g.beginPath();g.arc(0,-hgt*.92,2.8*s,0,7);g.fill();
+  g.fillStyle=kind==="elder"?"#D8D8D8":"#2B2B33";g.beginPath();g.arc(0,-hgt*.97,2.8*s,Math.PI,0);g.fill();
+  if(kind==="elder"){g.strokeStyle="#8A6A4A";g.lineWidth=1;g.beginPath();g.moveTo(4*s,-hgt*.5);g.lineTo(5*s,0);g.stroke();}
+  g.restore();}
+function zongzi(x,y,s,a){g.save();g.globalAlpha=a;g.fillStyle="#5FAE5A";g.beginPath();g.moveTo(x,y-s);g.lineTo(x-s*.9,y+s*.6);g.lineTo(x+s*.9,y+s*.6);g.closePath();g.fill();g.strokeStyle="#E9D8A6";g.lineWidth=1.2;g.beginPath();g.moveTo(x-s*.5,y);g.lineTo(x+s*.5,y);g.stroke();g.restore();}
+function boat(x,y,s,t,a,hull,head){g.save();g.globalAlpha=a;g.fillStyle=hull;g.beginPath();g.moveTo(x-s*1.7,y-s*.2);g.lineTo(x+s*1.6,y-s*.2);g.lineTo(x+s*1.1,y+s*.35);g.lineTo(x-s*1.2,y+s*.35);g.closePath();g.fill();
+  g.beginPath();g.moveTo(x-s*1.7,y-s*.2);g.lineTo(x-s*2.1,y-s*.8);g.lineTo(x-s*1.35,y-s*.2);g.fill();g.fillStyle=head;g.beginPath();g.arc(x-s*2.05,y-s*.82,s*.2,0,7);g.fill();
+  g.beginPath();g.moveTo(x+s*1.6,y-s*.2);g.lineTo(x+s*2,y-s*.6);g.lineTo(x+s*1.4,y-s*.2);g.fill();
+  g.strokeStyle="#F4E3C1";g.lineWidth=1.1;for(var k=-2;k<=2;k++){var sw=Math.sin(t*9+k)*s*.35;g.beginPath();g.moveTo(x+k*s*.5,y-s*.2);g.lineTo(x+k*s*.5+sw,y+s*.55);g.stroke();}g.restore();}
+function rabbit(x,y,s,a,hat,skewer){g.save();g.globalAlpha=a;g.fillStyle="#F2F2F2";g.beginPath();g.ellipse(x,y,s*.62,s*.42,0,0,7);g.fill();g.beginPath();g.arc(x+s*.55,y-s*.38,s*.32,0,7);g.fill();
+  g.beginPath();g.ellipse(x+s*.48,y-s*.95,s*.1,s*.36,-.2,0,7);g.fill();g.beginPath();g.ellipse(x+s*.7,y-s*.92,s*.1,s*.34,.25,0,7);g.fill();g.fillStyle="#E05A6A";g.beginPath();g.arc(x+s*.7,y-s*.42,s*.06,0,7);g.fill();
+  if(hat){g.fillStyle="#C9DC6A";g.beginPath();g.arc(x+s*.56,y-s*.62,s*.36,Math.PI,0);g.fill();g.fillStyle="#7A9A3A";g.fillRect(x+s*.53,y-s*1.08,s*.07,s*.14);}
+  if(skewer)drawSkewer(x+s*1.1,y-s*.4,s*.7,a);g.restore();}
+function drawSkewer(x,y,s,a){g.save();g.globalAlpha=a;g.strokeStyle="#C9A27A";g.lineWidth=1.2;g.beginPath();g.moveTo(x-s*.6,y+s*.6);g.lineTo(x+s*.9,y-s*.9);g.stroke();
+  ["#9B4A2A","#E9D05A","#9B4A2A"].forEach(function(c,i){g.fillStyle=c;g.save();g.translate(x-s*.2+i*s*.38,y+s*.2-i*s*.38);g.rotate(-Math.PI/4);g.fillRect(-s*.2,-s*.14,s*.4,s*.28);g.restore();});g.restore();}
+function mooncake(x,y,s,cut,a){g.save();g.globalAlpha=a;
+  if(!cut){g.fillStyle="#D9A04A";g.beginPath();g.ellipse(x,y,s,s*.62,0,Math.PI,0);g.lineTo(x+s,y+s*.15);g.lineTo(x-s,y+s*.15);g.closePath();g.fill();g.fillStyle="#8C4A20";g.beginPath();g.arc(x,y-s*.42,s*.1,0,7);g.fill();}
+  else{[-1,1].forEach(function(d){var ox=x+d*cut*s*.35;g.save();g.translate(ox,y);g.fillStyle="#E8C27A";g.beginPath();g.ellipse(0,0,s*.55,s*.55,0,d<0?Math.PI*.5:-Math.PI*.5,d<0?Math.PI*1.5:Math.PI*.5);g.fill();
+    g.fillStyle="#5A2E22";g.beginPath();g.ellipse(0,0,s*.42,s*.42,0,d<0?Math.PI*.5:-Math.PI*.5,d<0?Math.PI*1.5:Math.PI*.5);g.fill();g.fillStyle="#F2A93B";g.beginPath();g.ellipse(0,0,s*.2,s*.2,0,d<0?Math.PI*.5:-Math.PI*.5,d<0?Math.PI*1.5:Math.PI*.5);g.fill();g.restore();});}
+  g.restore();}
+function tree(x,base,s,a,t){g.save();g.globalAlpha=a;g.fillStyle="#7A5230";g.fillRect(x-s*.1,base-s*.3,s*.2,s*.3);g.fillStyle="#2F9E68";
+  [[0,.55],[.42,.8],[.84,1.05]].forEach(function(q){var top=base-s*1.9+q[0]*s*.62,bot=top+s*.78;g.beginPath();g.moveTo(x,top);g.lineTo(x-s*q[1]*.8,bot);g.lineTo(x+s*q[1]*.8,bot);g.closePath();g.fill();});
+  var cols=["#FBBF24","#F87171","#60A5FA","#F472B6"];[[-.25,-1.15],[.2,-.95],[-.35,-.65],[.3,-.55],[0,-.85],[-.1,-.45]].forEach(function(b,k){var on=(Math.floor(t*2)+k)%3!==0;g.fillStyle=on?cols[k%4]:"rgba(255,255,255,.2)";g.beginPath();g.arc(x+b[0]*s,base+b[1]*s,1.6,0,7);g.fill();});
+  star4(x,base-s*1.92,4,a*(.7+.3*Math.sin(t*3)),"#FFD666");g.restore();}
+function sleigh(x,y,a,t){g.save();g.globalAlpha=a;
+  for(var d=0;d<2;d++){var dx=x-30-d*17,by=y+Math.sin(t*8+d)*1.2;g.fillStyle="#9A6A3E";g.beginPath();g.ellipse(dx,by,6,3,0,0,7);g.fill();g.beginPath();g.arc(dx-6,by-3,2.2,0,7);g.fill();
+    g.strokeStyle="#9A6A3E";g.lineWidth=1;var lf=Math.sin(t*10+d)*2;g.beginPath();g.moveTo(dx-4,by+2);g.lineTo(dx-5+lf,by+6);g.moveTo(dx+4,by+2);g.lineTo(dx+5-lf,by+6);g.stroke();
+    g.strokeStyle="#D9C7A0";g.beginPath();g.moveTo(dx-6,by-5);g.lineTo(dx-8,by-8);g.moveTo(dx-6,by-5);g.lineTo(dx-4,by-8);g.stroke();if(d===0){g.fillStyle="#F04848";g.beginPath();g.arc(dx-8,by-3,1.1,0,7);g.fill();}}
+  g.strokeStyle="#C9A85A";g.lineWidth=.8;g.beginPath();g.moveTo(x-14,y);g.lineTo(x-26,y);g.stroke();
+  g.fillStyle="#C42A2A";g.beginPath();g.moveTo(x-14,y-3);g.lineTo(x+9,y-3);g.lineTo(x+11,y+4);g.lineTo(x-15,y+4);g.closePath();g.fill();g.strokeStyle="#E8C25A";g.lineWidth=1;g.beginPath();g.moveTo(x-16,y+6);g.lineTo(x+12,y+6);g.quadraticCurveTo(x+15,y+6,x+15,y+3);g.stroke();
+  g.fillStyle="#D42B2B";rr(x-6,y-11,8,9,3);g.fill();g.fillStyle="#F2D6BE";g.beginPath();g.arc(x-2,y-13,2.6,0,7);g.fill();g.fillStyle="#FFFFFF";g.beginPath();g.arc(x-2,y-11.5,2.3,0,Math.PI);g.fill();
+  g.fillStyle="#D42B2B";g.beginPath();g.moveTo(x-5,y-14);g.lineTo(x+1,y-14);g.lineTo(x+3,y-18);g.closePath();g.fill();g.fillStyle="#FFFFFF";g.beginPath();g.arc(x+3,y-18,1.1,0,7);g.fill();
+  g.fillStyle="#6A3E1E";g.fillRect(x+3,y-8,6,5);g.restore();}
+function jet(x,y,a){g.save();g.globalAlpha=a;g.translate(x,y);g.rotate(-.06);g.fillStyle="#C9CED6";g.beginPath();g.moveTo(12,0);g.lineTo(4,-1.6);g.lineTo(-10,-1.6);g.lineTo(-12,0);g.lineTo(-10,1.6);g.lineTo(4,1.6);g.closePath();g.fill();
+  g.beginPath();g.moveTo(2,0);g.lineTo(-5,-7);g.lineTo(-8,-7);g.lineTo(-4,0);g.closePath();g.fill();g.beginPath();g.moveTo(2,0);g.lineTo(-5,7);g.lineTo(-8,7);g.lineTo(-4,0);g.closePath();g.fill();
+  g.beginPath();g.moveTo(-8,0);g.lineTo(-12,-4.5);g.lineTo(-13,-4.5);g.lineTo(-11,0);g.closePath();g.fill();g.fillStyle="#3A4A66";g.beginPath();g.ellipse(6,-.6,2.4,1,0,0,7);g.fill();g.restore();}
+var flagCanvas=null;
+function makeFlag(){var w=60,h=40,c=document.createElement("canvas");c.width=w*2;c.height=h*2;var x=c.getContext("2d");x.scale(2,2);
+  x.fillStyle="#C8102E";x.fillRect(0,0,w,h);x.fillStyle="#002D8F";x.fillRect(0,0,w/2,h/2);var cx=w/4,cy=h/4,R=h/4*.75;
+  x.fillStyle="#FFFFFF";x.beginPath();for(var i=0;i<24;i++){var r2=i%2?R*.5:R,an=-Math.PI/2+i*Math.PI/12;x.lineTo(cx+r2*Math.cos(an),cy+r2*Math.sin(an));}x.closePath();x.fill();
+  x.fillStyle="#002D8F";x.beginPath();x.arc(cx,cy,R*.47,0,7);x.fill();x.fillStyle="#FFFFFF";x.beginPath();x.arc(cx,cy,R*.4,0,7);x.fill();flagCanvas=c;}
+function wavingFlag(x,y,t,a){if(!flagCanvas)makeFlag();g.save();g.globalAlpha=a;g.fillStyle="#B9BEC6";g.fillRect(x-2,y-2,1.6,52);
+  for(var i=0;i<60;i+=2){var off=Math.sin(t*3-i*.12)*(i/60)*3.2,sh=1-.18*(.5+.5*Math.cos(t*3-i*.12))*(i/60);g.drawImage(flagCanvas,i*2,0,4,80,x+i,y+off,2.2,40);
+    if(sh<1){g.fillStyle="rgba(0,0,0,"+((1-sh)*.9).toFixed(3)+")";g.fillRect(x+i,y+off,2.2,40);}}g.restore();}
+function shieldPath(x,y,s){g.beginPath();g.moveTo(x-s,y-s*.9);g.lineTo(x+s,y-s*.9);g.lineTo(x+s,y+s*.1);g.quadraticCurveTo(x+s*.5,y+s*.8,x,y+s*1.05);g.quadraticCurveTo(x-s*.5,y+s*.8,x-s,y+s*.1);g.closePath();}
+function shield(x,y,s,a){g.save();g.globalAlpha=a;var gr=g.createLinearGradient(x-s,y-s,x+s,y+s);gr.addColorStop(0,"#3B63C4");gr.addColorStop(1,"#22408A");g.fillStyle=gr;shieldPath(x,y,s);g.fill();
+  g.strokeStyle="#E8C25A";g.lineWidth=1.5;g.stroke();g.fillStyle="#E8C25A";g.beginPath();for(var i=0;i<10;i++){var r2=i%2?s*.22:s*.5,an=-Math.PI/2+i*Math.PI/5;g.lineTo(x+r2*Math.cos(an),y-s*.05+r2*Math.sin(an));}g.closePath();g.fill();g.restore();}
+function officer(x,gy,a,t,female,wave){g.save();g.globalAlpha=a;g.translate(x,gy);
+  g.strokeStyle="#1F2B44";g.lineWidth=2;g.beginPath();g.moveTo(-1.5,-7);g.lineTo(-2,0);g.moveTo(1.5,-7);g.lineTo(2,0);g.stroke();
+  g.fillStyle="#2F4F8F";rr(-4,-16,8,10,2);g.fill();g.fillStyle="#E8C25A";g.fillRect(1,-14,1.6,1.6);
+  var arm=wave?Math.sin(t*4)*.9-.6:0;g.save();g.translate(3.5,-14);g.rotate(arm);g.strokeStyle="#2F4F8F";g.lineWidth=2;g.beginPath();g.moveTo(0,0);g.lineTo(0,-7);g.stroke();if(wave){g.strokeStyle="#F2F2F2";g.lineWidth=1.4;g.beginPath();g.moveTo(0,-7);g.lineTo(0,-9.5);g.stroke();}g.restore();
+  g.fillStyle="#E9C2A0";g.beginPath();g.arc(0,-19,3,0,7);g.fill();
+  if(female){g.fillStyle="#2B2B33";g.beginPath();g.arc(-2.8,-17.2,1.8,0,7);g.fill();}
+  g.fillStyle="#22355E";g.fillRect(-3.6,-23.2,7.2,2.2);g.fillRect(-1.2,-22,5.6,1.2);g.restore();}
+function prisoner(x,gy,a,t){g.save();g.globalAlpha=a;g.translate(x,gy);var leg=Math.sin(t*10)*1.8;g.strokeStyle="#222";g.lineWidth=2;g.beginPath();g.moveTo(-1.5,-7);g.lineTo(-1.5-leg,0);g.moveTo(1.5,-7);g.lineTo(1.5+leg,0);g.stroke();
+  for(var i=0;i<5;i++){g.fillStyle=i%2?"#F2F2F2":"#1C1C1C";g.fillRect(-4,-16+i*2,8,2);}
+  g.strokeStyle="#C9CED6";g.lineWidth=1;g.beginPath();g.arc(0,-8.6,1.6,0,7);g.stroke();
+  g.fillStyle="#E9C2A0";g.beginPath();g.arc(0,-19,3,0,7);g.fill();g.fillStyle="#2B2B33";g.beginPath();g.arc(0,-20,3,Math.PI,0);g.fill();g.restore();}
+function policeCar(x,gy,a,t,flash){g.save();g.globalAlpha=a;g.translate(x,gy);g.fillStyle="#F4F6F8";rr(-22,-11,44,8,2.5);g.fill();g.beginPath();g.moveTo(-12,-11);g.lineTo(-7,-17);g.lineTo(8,-17);g.lineTo(13,-11);g.closePath();g.fill();
+  g.fillStyle="#5B7DB8";g.fillRect(-10,-16,7,4.5);g.fillRect(-1,-16,8,4.5);g.fillStyle="#1C3A82";g.fillRect(-22,-7,44,2);
+  var on=Math.floor(t*(flash?8:3))%2;g.fillStyle=on?"#FF3B3B":"#7A2020";g.fillRect(-3,-19.5,3,2.4);g.fillStyle=on?"#2B3B6A":"#3B6BFF";g.fillRect(0,-19.5,3,2.4);
+  g.fillStyle="#1A1A1A";g.beginPath();g.arc(-13,-3,3.2,0,7);g.arc(13,-3,3.2,0,7);g.fill();g.fillStyle="#9AA0A8";g.beginPath();g.arc(-13,-3,1.3,0,7);g.arc(13,-3,1.3,0,7);g.fill();g.restore();}
+
+/* ===================== 各節日的背景層 ===================== */
+function drawThemeBack(now,t){
+  var amb=level>0&&!reduce,e=Math.min(1,(now-entranceT)/2200),A=lvl(.3,.36,.44),dt=Math.min(50,now-lastNow);
+  if(theme==="cny"){
+    sanheyuan(184,H-1,A+.1);
+    folks.forEach(function(f){if(amb){if(f.pause>0)f.pause-=dt;else{f.x+=f.dir*f.sp*dt/16;f.ph+=.18*dt/16;if(f.x<92||f.x>272||Math.random()<.002){f.dir*=-1;f.x=clamp(f.x,92,272);}if(Math.random()<.003)f.pause=rand(800,2600);}}
+      person(f.x,H-1,f.s,f.c,f.kind,f.pause>0?0:f.ph,A+.3,f.dir);});
+    [[150,14,9,0],[205,20,11,1.3],[262,12,8,2.4]].forEach(function(L){lantern(L[0],L[1],L[2],amb?Math.sin(t*lvl(0,1.3,1.9)+L[3])*lvl(0,.08,.16):0,A+.1);});
+    STARS.forEach(function(s){star4(s[0],s[1]*.6,s[3],amb?.25+.35*Math.max(0,Math.sin(t*2+s[2])):.25,"#FFD666");});
+    if(special&&amb&&now-fwT>lvl(1e9,5000,2500)){fwT=now;rocket(rand(130,240),["#FBBF24","#F87171"],false);}
+  } else if(theme==="dbf"){
+    g.strokeStyle="rgba(96,180,210,"+A+")";g.lineWidth=1.4;for(var w=0;w<2;w++){g.beginPath();for(var x=0;x<=W;x+=4){var yy=H-8-w*7+Math.sin(x*.06+(amb?t*lvl(0,1.2,2):0)+w)*2.2;x?g.lineTo(x,yy):g.moveTo(x,yy);}g.stroke();}
+    [[220,48],[248,40],[276,50]].forEach(function(z,k){zongzi(z[0],z[1]+(amb?Math.sin(t*2+k)*2.2:0),7,A+.1);});
+    if(amb&&now-boatT>lvl(1e9,22000,11000))boatT=now;
+    var bp=(now-boatT)/lvl(1,7000,5500);if(bp>=0&&bp<=1.25){var lead=Math.sin(bp*5)*9;boat(W+40-bp*(W+90)+lead,H-19,5.5,t,A+.2,"#2B8C8C","#2E8B57");boat(W+20-bp*(W+90)-lead,H-11,7,t,A+.3,"#D9822B","#C42828");}
+    if(special){var ep=Math.min(1,(now-eggT)/2500);g.save();g.translate(52,H-12);g.rotate((1-ease(ep))*1.2);g.fillStyle="#FFF3DC";g.beginPath();g.ellipse(0,-9,6.5,9,0,0,7);g.fill();g.restore();if(ep>=1){g.font=F(7.5,700);g.fillStyle="rgba(255,243,220,.85)";g.fillText("立蛋成功",64,H-16);}}
+  } else if(theme==="moon"){
+    var my=34+(1-ease(e))*80,glow=amb?.5+.5*Math.sin(t*1.2):.6;
+    var gr=g.createRadialGradient(258,my,4,258,my,40);gr.addColorStop(0,"rgba(255,232,150,"+(.35*glow+.15)+")");gr.addColorStop(1,"rgba(255,232,150,0)");g.fillStyle=gr;g.beginPath();g.arc(258,my,40,0,7);g.fill();
+    g.fillStyle="rgba(250,226,150,"+(A+.2)+")";g.beginPath();g.arc(258,my,19,0,7);g.fill();g.fillStyle="rgba(220,190,110,.25)";g.beginPath();g.arc(252,my-4,4,0,7);g.arc(264,my+5,3,0,7);g.fill();
+    STARS.slice(0,10).forEach(function(s){g.fillStyle="rgba(255,240,200,"+(amb?.2+.5*Math.max(0,Math.sin(t*2.3+s[2])):.3)+")";g.beginPath();g.arc(s[0],s[1],.9,0,7);g.fill();});
+    if(amb&&now-rabbitT>lvl(1e9,20000,10000))rabbitT=now;
+    var rp=(now-rabbitT)/6000;if(rp>=0&&rp<=1){var rx=-20+rp*(W+40),hop=Math.abs(Math.sin(rp*Math.PI*7))*12;rabbit(rx,H-14-hop,11,A+.35,false,special);}
+    if(special){for(var sm=0;sm<3;sm++){var sp=((t*.25+sm/3)%1);g.fillStyle="rgba(220,220,228,"+(.09*(1-sp))+")";g.beginPath();g.arc(40+sm*30+sp*20,H-6-sp*60,6+sp*14,0,7);g.fill();}}
+  } else if(theme==="double10"){
+    wavingFlag(214,38,amb?t:0,A+.12);
+    if(amb&&now-jetT>lvl(1e9,16000,9000)){jetT=now;trails=[];}
+    var jp=(now-jetT)/3800;
+    if(jp>=0&&jp<=1){var jx=-20+jp*(W+40),jy=30-jp*14;trails.push({x:jx-12,y:jy,t:now});jet(jx,jy,.75);}
+    trails=trails.filter(function(p){return now-p.t<6000;});
+    ["#F87171","#FFFFFF","#60A5FA"].forEach(function(c,k){g.strokeStyle=c;g.lineCap="round";for(var i=1;i<trails.length;i++){var a=trails[i-1],b=trails[i],age=(now-b.t)/6000,spread=age*7;g.globalAlpha=(1-age)*.42;g.lineWidth=2+age*4;g.beginPath();g.moveTo(a.x,a.y+(k-1)*(2.6+spread));g.lineTo(b.x,b.y+(k-1)*(2.6+spread));g.stroke();}});g.globalAlpha=1;
+    if(amb&&now-fwT>lvl(1e9,9000,(special?700:4200))){fwT=now;var sets=[["#F87171","#FFFFFF"],["#60A5FA","#FFFFFF"],["#FFFFFF","#F87171","#60A5FA"]];rocket(rand(30,190),sets[(Math.random()*3)|0],level===2);}
+  } else if(theme==="xmas"){
+    tree(270,H-Math.max(0,snowLine-1),20,A+.4,amb?t:0);
+    if(amb){var want=lvl(0,18,40),cnt=0;P.forEach(function(p){if(p.k==="snow")cnt++;});for(var k=cnt;k<want;k++)if(Math.random()<.04)add(snowflake(false));}
+    if(amb&&now-sleighT>lvl(1e9,24000,14000)){sleighT=now;giftDrop=0;}
+    var sp2=(now-sleighT)/6000;if(sp2>=0&&sp2<=1){var sx=W+40-sp2*(W+90),sy=26+Math.sin(sp2*6)*5;sleigh(sx,sy,.8,t);
+      if(special&&sp2>giftDrop+.18){giftDrop=sp2;add({k:"pop",what:"gift",x:sx,y:sy+6,vx:0,vy:.6,g:.03,life:15,max:110,L:"b",nopop:true});}}
+  } else if(theme==="newyear"){
+    var yp=amb?Math.max(0,1-((now-yearT)%lvl(1e9,9000,5000))/1200):0;
+    g.font="900 46px 'Noto Serif TC','Noto Serif CJK TC',serif";g.textAlign="center";g.fillStyle="rgba(255,214,102,"+(.08+.22*yp)+")";g.fillText(String(YEAR),152,80);g.textAlign="left";
+    if(amb){var want2=lvl(0,6,14),c2=0;P.forEach(function(p){if(p.drift)c2++;});for(var k2=c2;k2<want2;k2++)if(Math.random()<.03)add(fallConf(false));}
+  } else if(theme==="police"){
+    shield(262,60,22,A+.12);
+    var gp=amb?((now-glintT)%lvl(1e9,15000,8000))/1400:2;if(gp<1){g.save();shieldPath(262,60,22);g.clip();var gx=236+gp*60,lg=g.createLinearGradient(gx-14,0,gx+14,0);lg.addColorStop(0,"rgba(255,255,255,0)");lg.addColorStop(.5,"rgba(255,255,255,.55)");lg.addColorStop(1,"rgba(255,255,255,0)");g.fillStyle=lg;g.fillRect(gx-14,30,28,60);g.restore();}
+    STARS.slice(0,10).forEach(function(s){star4(s[0]*.75,s[1]*.7,s[3]*.9,amb?.2+.4*Math.max(0,Math.sin(t*2+s[2])):.25,"#FAD25A");});
+    g.fillStyle="rgba(140,150,165,"+(A*.6)+")";g.fillRect(0,H-1.5,W,1.5);
+    var ap=(now-arrestT)/9000, carX=246;
+    if(ap>=0&&ap<1){
+      if(ap<.45){var wx=-10+ap/.45*(carX-28);officer(wx-9,H-1,A+.35,t,false,false);prisoner(wx+3,H-1,A+.4,t);}
+      else if(ap<.55){officer(carX-36,H-1,A+.35,t,false,false);}
+      if(ap>=.55&&ap<.8){carX=246+Math.pow((ap-.55)/.25,2)*120;}else if(ap>=.8){carX=246+(1-(ap-.8)/.2)*120;}
+      policeCar(carX,H-1,A+.4,t,true);
+    } else policeCar(carX,H-1,A+.4,t,false);
+    officer(150,H-1,A+.4,t,false,amb);officer(186,H-1,A+.4,t+1.2,true,amb);
+    if(amb&&!rec&&now-arrestT>lvl(1e9,90000,45000))arrestT=now;
+  }
+}
+
+/* ===================== 粒子 ===================== */
+function drawParticles(layer){
+  for(var i=0;i<P.length;i++){var p=P[i];if(p.L!==layer)continue;var a=Math.max(0,1-p.life/p.max);
+    if(p.k==="spark"){g.fillStyle=rgba(p.c,a);g.beginPath();g.arc(p.x,p.y,p.r,0,7);g.fill();}
+    else if(p.k==="rocket"){g.fillStyle=p.c;g.beginPath();g.arc(p.x,p.y,1.4,0,7);g.fill();g.fillStyle=rgba(p.c,.35);g.fillRect(p.x-.5,p.y,1,7);}
+    else if(p.k==="snow"){g.fillStyle="rgba(240,246,255,"+(p.L==="f"?.6:.75)+")";g.beginPath();g.arc(p.x,p.y,p.r,0,7);g.fill();}
+    else if(p.k==="conf"){g.save();g.translate(p.x,p.y);g.rotate(p.rot);g.globalAlpha=p.drift?.7:a;g.fillStyle=p.c;g.fillRect(-p.r,-p.r*.45,p.r*2,p.r*.9);g.restore();}
+    else if(p.k==="coin"){g.save();g.globalAlpha=a;g.translate(p.x,p.y);g.scale(Math.abs(Math.cos(p.life*.2))+.15,1);g.fillStyle="#F5C542";g.beginPath();g.arc(0,0,3,0,7);g.fill();g.restore();}
+    else if(p.k==="packet"){g.save();g.translate(p.x,p.y);g.scale(Math.cos(p.life*.12),1);g.globalAlpha=Math.min(1,a*1.4);g.fillStyle="#D62E2E";rr(-5,-7,10,14,1.5);g.fill();g.fillStyle="#F5C542";g.beginPath();g.arc(0,-1,2.2,0,7);g.fill();g.restore();}
+    else if(p.k==="pop"){var s2=p.nopop?1:Math.min(1,p.life/14),cl=p.life>18&&!p.nopop;g.save();g.translate(p.x,p.y);g.scale(back(s2),back(s2));g.globalAlpha=a;
+      if(p.what==="gift"){g.fillStyle="#E14B5A";g.fillRect(-6,-4,12,10);g.fillStyle="#FBBF24";g.fillRect(-1,-4,2,10);g.save();if(cl){g.translate(-6,-4);g.rotate(-.7);g.translate(6,4);}g.fillStyle="#C73A48";g.fillRect(-7,-7,14,3.5);g.restore();}
+      else{g.fillStyle="#5FAE5A";g.beginPath();g.moveTo(0,-8);g.lineTo(-7,5);g.lineTo(7,5);g.closePath();g.fill();g.strokeStyle="#E9D8A6";g.lineWidth=1.2;g.beginPath();g.moveTo(-4,-1);g.lineTo(4,-1);g.stroke();}g.restore();}
+    else if(p.k==="text"){g.font=F(8.5,700);g.textAlign="center";g.lineWidth=3;g.strokeStyle="rgba(20,23,29,"+(a*.85).toFixed(3)+")";g.strokeText(p.t,p.x,p.y);g.fillStyle=rgba(p.c,a);g.fillText(p.t,p.x,p.y);g.textAlign="left";}
+    else if(p.k==="ring"){g.strokeStyle="rgba(150,210,230,"+(a*.6).toFixed(3)+")";g.lineWidth=1;g.beginPath();g.ellipse(p.x,p.y,4+p.life*.3,1.5+p.life*.1,0,0,7);g.stroke();}
+    else if(p.k==="aroma"){g.strokeStyle="rgba(240,230,220,"+(a*.6).toFixed(3)+")";g.lineWidth=1.2;g.beginPath();for(var q=0;q<10;q++){var yy=p.y-q*2.2,xx=p.x+Math.sin(q*.8+p.life*.12)*2.2;q?g.lineTo(xx,yy):g.moveTo(xx,yy);}g.stroke();}
+  }
+}
+function stepParticles(){
+  for(var i=P.length-1;i>=0;i--){var p=P[i];p.life++;
+    if(p.k==="snow"){p.x+=p.vx+Math.sin(p.life*.03+p.ph)*.15;p.y+=p.vy;if(p.y>H-snowLine-1){if(snowLine<lvl(0,5,7))snowLine+=.02;P.splice(i,1);}if(p.x<-5)p.x=W+5;if(p.x>W+5)p.x=-5;continue;}
+    if(p.drift){p.x+=p.vx+Math.sin(p.life*.04)*.2;p.y+=p.vy;p.rot+=p.vr;if(p.y>H+6)P.splice(i,1);continue;}
+    p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;if(p.k==="conf"){p.vx*=.985;p.rot+=p.vr;}
+    if(p.k==="rocket"&&p.vy>-.4){burst(p.x,p.y,p.cols,p.big?46:30,p.big?2.2:1.7,"b");P.splice(i,1);continue;}
+    if(p.life>p.max)P.splice(i,1);}
+}
+
+/* ===================== 前景道具（中秋點一下） ===================== */
+function drawMoonProp(now,t){if(!moonProp)return;var el=(now-moonProp.t0)/1000;if(el>4.2){moonProp=null;return;}var a=el<3.6?1:1-(el-3.6)/.6,x=moonProp.x,y=moonProp.y;
+  if(moonProp.kind===0){var hop=Math.abs(Math.sin(el*5))*6*Math.max(0,1-el/2);rabbit(x,y-hop,13,a,el>.35,false);}
+  else if(moonProp.kind===1){drawSkewer(x,y,9*Math.min(1,el*3),a);}
+  else{var cut=el<.8?0:Math.min(1,(el-.8)/.4);var sx=x-30+Math.min(1,el/.5)*30;mooncake(sx,y,11,cut,a);if(el>.55&&el<.85){g.save();g.globalAlpha=a;g.strokeStyle="#E6E9EE";g.lineWidth=1.4;g.beginPath();g.moveTo(sx,y-16+(el-.55)/.3*22);g.lineTo(sx,y-26+(el-.55)/.3*22);g.stroke();g.restore();}}}
+
+/* ===================== 跨年倒數（最後 10 秒） ===================== */
+function drawCountdown(now){if(cdT<0)return;var left=15-(now-cdT)/1000;if(left<=-1.5){cdT=-1e9;bannerT=now;entranceT=now;yearFired=true;return;}
+  if(left<=10&&left>0){var n=Math.ceil(left),f=n-left,s=.4+f*1.9,rot=(1-f)*-Math.PI*.6+f*.25,a=f<.8?1:(1-f)/.2;
+    g.save();g.translate(W/2,BH+H/2);g.rotate(rot);g.scale(s,s);g.globalAlpha=a;g.font="900 58px 'Noto Serif TC','Noto Serif CJK TC',serif";g.textAlign="center";g.textBaseline="middle";
+    g.lineWidth=6;g.strokeStyle="rgba(20,23,29,.85)";g.strokeText(String(n),0,2);var gr=g.createLinearGradient(0,-30,0,30);gr.addColorStop(0,"#FFF3B0");gr.addColorStop(1,"#F5A524");g.fillStyle=gr;g.fillText(String(n),0,2);g.restore();
+    if(f<.05&&!cdBurst[n]){cdBurst[n]=true;burst(W/2,H/2,["#FBBF24","#FFFFFF","#F472B6"],lvl(0,14,26),2.2,"f");}}
+  if(left<=0&&!cdBurst[0]){cdBurst[0]=true;for(var i=0;i<3;i++)burst(rand(60,W-60),rand(30,90),["#FBBF24","#F472B6","#60A5FA","#FFFFFF"],40,2.6,"f");confetti(20,20,30,1,1.3);confetti(W-20,20,30,-1,1.3);}
+  if(left<=0){var a2=Math.max(0,1+left/1.5);g.save();g.globalAlpha=a2;g.font="900 50px 'Noto Serif TC','Noto Serif CJK TC',serif";g.textAlign="center";g.textBaseline="middle";g.lineWidth=6;g.strokeStyle="rgba(20,23,29,.85)";g.strokeText(String(YEAR),W/2,BH+H/2);g.fillStyle="#FFD666";g.fillText(String(YEAR),W/2,BH+H/2);g.restore();}}
+var cdBurst={};
+
+/* ===================== 橫幅（滿版寬，貼在小視窗上方） ===================== */
+function drawBanner(now,t){
+  if(alarm)return false;var T=TH[theme],el=now-bannerT,DUR=8000,label=T.name,greet=T.greet;
+  var counting=cdT>0&&(now-cdT)/1000<15;
+  if(!counting&&(el<0||el>DUR+400))return false;
+  var pin=counting?1:Math.min(1,el/450),pout=!counting&&el>DUR?Math.min(1,(el-DUR)/350):0,y=(1-(level===2?back(pin):ease(pin)))*-BH+pout*-BH;
+  g.save();g.beginPath();g.rect(0,0,W,BH);g.clip();g.fillStyle=counting?"#2B2E44":T.bg;rr(10,y+2,W-20,BH+8,9);g.fill();
+  if(counting){var left=Math.max(0,15-(now-cdT)/1000);label="跨年倒數";greet="00:00:"+(left<10?"0":"")+Math.ceil(left);}
+  else if(theme==="newyear"&&level>0&&!yearFired){var ce=el/1000;if(ce<.7)label="3";else if(ce<1.4)label="2";else if(ce<2.1)label="1";else{yearFired=true;confetti(20,-6,lvl(0,14,26),1);confetti(W-20,-6,lvl(0,14,26),-1);}}
+  g.textBaseline="middle";var fg=counting?"#FFD666":T.fg,soft=fg==="#FFFFFF"?"rgba(255,255,255,.8)":rgba(fg,.8);
+  var sc=label.length===1?1+.25*Math.max(0,1-((el/700)%1)*2):1;g.save();g.translate(22,y+BH/2+1);g.scale(sc,sc);g.font=F(10,700);g.fillStyle=fg;g.fillText(label,0,0);var tw=g.measureText(label).width;g.restore();
+  if(label.length>1){g.font=counting?"700 "+(10*96/72)+"px 'Segoe UI',Arial,sans-serif":F(8);g.fillStyle=counting?fg:soft;g.fillText(greet,22+tw+10,y+BH/2+1.5);}
+  g.font=F(10);g.fillStyle=soft;g.textAlign="right";g.fillText("×",W-20,y+BH/2+1);g.textAlign="left";
+  if(theme==="xmas"&&level>0&&!counting){var cap=Math.min(1,el/2200);g.fillStyle="rgba(250,252,255,.95)";g.beginPath();g.moveTo(14,y+2);for(var x=14;x<=W-14;x+=6)g.lineTo(x,y+2+cap*(2.4+1.6*Math.sin(x*.4)));g.lineTo(W-14,y+2);g.closePath();g.fill();}
+  if(theme==="dbf"&&level>0&&el<4600&&!counting){var bp=el/4600,ld=Math.sin(bp*7)*8;boat(W+40-bp*(W+90)+ld,y+BH-5,4,t,.95,"#2B8C8C","#2E8B57");boat(W+10-bp*(W+90)-ld,y+BH-3,4.6,t,.98,"#D9822B","#C42828");}
+  g.restore();return true;
+}
+
+/* ===================== 登場特效 ===================== */
+function entrance(now){if(alarm||level===0)return;var el=now-entranceT;
+  if(theme==="cny"&&el<2200){var k=Math.floor(el/200);if(k!==cnyK){cnyK=k;burst(W-24-k*24,-BH/2,["#F87171","#FBBF24"],lvl(0,10,18),1.5,"f");}}
+  if(theme==="double10"&&el<2400){[0,700,1400].forEach(function(d,i){if(el>d&&!d10[i]){d10[i]=true;rocket([70,150,230][i],[["#F87171","#FFFFFF"],["#60A5FA","#FFFFFF"],["#FFFFFF","#F87171","#60A5FA"]][i],true);}});}}
+
+/* ===================== 事件 ===================== */
+function onClick(x,y){if(alarm||level===0)return;
+  if(theme==="cny"){add({k:"packet",x:x,y:y,vx:rand(-.3,.3),vy:-1.2,g:.05,life:0,max:110,L:"f"});floatText(x,y-10,LUCK[luckI++%LUCK.length],"#FFD666");}
+  else if(theme==="dbf"){add({k:"pop",what:"zz",x:x,y:y,vx:0,vy:-.2,g:0,life:0,max:90,L:"f"});floatText(x,y-14,"包中！","#E3F5D8");}
+  else if(theme==="moon"){var k=moonI++%3,px=clamp(x,40,W-40),py=clamp(y,40,H-14);moonProp={kind:k,t0:performance.now(),x:px,y:py};
+    if(k===1){for(var j=0;j<3;j++)add({k:"aroma",x:px+4+j*4,y:py-8,vx:0,vy:-.12,g:0,life:j*8,max:110,L:"f"});}
+    floatText(px,py-26,["柚子帽戴好了","每年的大事！我要烤肉","少不了好吃的蛋黃酥"][k],"#F7DF8E");}
+  else if(theme==="double10"){burst(x,y,["#F87171","#FFFFFF","#60A5FA"],lvl(0,30,48),2,"f");}
+  else if(theme==="xmas"){add({k:"pop",what:"gift",x:x,y:y,vx:0,vy:-.2,g:0,life:0,max:90,L:"f"});setTimeout(function(){burst(x,y-6,["#FBBF24","#FFFFFF"],16,1.4,"f");},300);floatText(x,y-16,"叮噹～","#FFFFFF");}
+  else if(theme==="newyear"){confetti(x,y,lvl(0,18,32));}
+  else if(theme==="police"){if(x>215&&y>100){if(rec){floatText(x,y-14,"錄影中先不抓人，等等再演","#FAD25A");}else arrestT=performance.now();return;}
+    floatText(x,y-8,MSGS[msgI++%MSGS.length],"#FAD25A");burst(x,y,["#FAD25A"],10,1.2,"f");}}
+function onRec(){rec=true;recStart=Date.now();done=null;if(alarm||level===0)return;var px=W-80,py=21;
+  if(theme==="cny")for(var i=0;i<lvl(0,10,18);i++)add({k:"coin",x:px,y:py,vx:rand(-1.6,1.6),vy:rand(-2.6,-1),g:.08,life:0,max:80,L:"f"});
+  else if(theme==="dbf")boatT=performance.now();
+  else if(theme==="moon"){for(var j=0;j<14;j++)add({k:"spark",x:300-j*8,y:10+j*3,vx:0,vy:0,g:0,life:j*2,max:40+j*2,c:"#FFF3C4",r:1.2-j*.05,L:"b"});}
+  else if(theme==="double10"){jetT=performance.now();trails=[];}
+  else if(theme==="xmas")burst(270,H-40,["#FFD666","#FFFFFF"],lvl(0,14,24),1.3,"f");
+  else if(theme==="newyear"){confetti(16,40,lvl(0,10,18),1);confetti(W-16,40,lvl(0,10,18),-1);}
+  else if(theme==="police"){glintT=performance.now();burst(262,58,["#FAD25A"],lvl(0,14,24),1.4,"b");arrestT=-1e9;}}
+function onDone(){rec=false;done=(theme==="police"?"警察節特別版：":"")+"本次錄影 42 分鐘，全程收音正常";if(alarm||level===0)return;confetti(W/2,30,lvl(0,10,20));}
+
+/* ===================== 介面 ===================== */
+var tabs=document.getElementById("tabs");
+ORDER.forEach(function(k){var b=document.createElement("button");b.type="button";b.textContent=TH[k].tab;b.dataset.k=k;b.addEventListener("click",function(){setTheme(k);});tabs.appendChild(b);});
+function setTheme(k){theme=k;yearFired=false;cnyK=-1;d10=[false,false,false];alarm=false;rec=true;done=null;special=false;recStart=Date.now()-(18*60+42)*1000;eggT=0;cdBurst={};
+  document.getElementById("bSpecial").textContent="特別時刻";document.getElementById("bAlarm").textContent="收音中斷";
+  tabs.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.k===k?"true":"false");});
+  var T=TH[k];document.getElementById("xName").textContent=T.name;document.getElementById("xPeriod").textContent="出現期間："+T.period;
+  var ul=document.getElementById("xBeats");ul.innerHTML="";T.beats.forEach(function(b){var li=document.createElement("li");li.innerHTML='<span class="k"></span><p></p>';li.firstChild.textContent=b[0];li.lastChild.textContent=b[1];ul.appendChild(li);});
+  document.getElementById("xIdea").textContent=T.idea;reset();}
+document.querySelectorAll("#levels button").forEach(function(b){b.addEventListener("click",function(){level=+b.dataset.l;document.querySelectorAll("#levels button").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});setTheme(theme);});});
+document.getElementById("bReplay").addEventListener("click",function(){setTheme(theme);});
+document.getElementById("bRec").addEventListener("click",function(){onRec();});
+document.getElementById("bDone").addEventListener("click",function(){onDone();});
+document.getElementById("bSpecial").addEventListener("click",function(){special=!special;eggT=performance.now();this.textContent=special?"結束特別時刻":"特別時刻";
+  if(special&&theme==="moon")rabbitT=performance.now();if(special&&theme==="xmas")sleighT=performance.now();if(special&&theme==="newyear"){cdT=performance.now();cdBurst={};yearFired=true;}});
+document.getElementById("bAlarm").addEventListener("click",function(){alarm=!alarm;this.textContent=alarm?"恢復正常":"收音中斷";if(alarm){P=[];cdT=-1e9;}else{bannerT=-1e9;if(theme==="xmas")for(var i=0;i<lvl(0,18,40);i++)add(snowflake(true));}});
+cv.addEventListener("click",function(e){var r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*CH-BH;if(y<0){if(x>W-30)bannerT=-1e9;return;}onClick(x,y);});
+
+function frame(now){var t=now/1000;sample(now);entrance(now);if(!reduce)stepParticles();
+  g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);g.setTransform(K,0,0,K,0,0);
+  var hasBanner=drawBanner(now,t);
+  g.save();g.translate(0,BH);rr(0,0,W,H,8);g.save();g.clip();drawCard(now,t);if(!alarm)drawMoonProp(now,t);g.restore();if(!alarm)drawParticles("f");
+  g.lineWidth=alarm?2:1;g.strokeStyle=alarm?rgba(C.red,.9):C.border;var o=g.lineWidth/2;rr(o,o,W-2*o,H-2*o,8);g.stroke();g.restore();
+  if(!alarm)drawCountdown(now);
+  lastNow=now;requestAnimationFrame(frame);}
+setTheme("cny");
+requestAnimationFrame(frame);
+})();
+</script>
+
+
+</body>
+</html>
