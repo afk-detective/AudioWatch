@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AudioWatch 筆錄收音錄影監看工具</title>
+<title>AudioWatch 筆錄收音監看</title>
 <meta name="description" content="製作筆錄時，在螢幕角落即時顯示收音、錄影畫面與錄影狀態。不錄音、不連網，Windows 10／11 免費使用。">
 <meta property="og:title" content="AudioWatch 筆錄收音監看">
 <meta property="og:description" content="收音中斷、畫面全黑、忘了按錄影，當下就會知道。">
@@ -18,12 +18,12 @@
    網站設定：上架後只需要改這裡
    ========================================================= */
 const SITE = {
-  githubUser: "afk-detective",               // 放網站與下載檔的 GitHub 帳號，例如 "my-account"
+  githubUser: "",               // 放網站與下載檔的 GitHub 帳號，例如 "my-account"
   repo: "audiowatch",           // repo 名稱
-  assetName: "AudioWatch-v2.0.1.zip",  // Releases 上傳的檔名（請保持一致）
-  goatcounter: "afkdetective",              // GoatCounter 代碼，例如 "audiowatch"（= audiowatch.goatcounter.com）
+  assetName: "AudioWatch.zip",  // Releases 上傳的檔名（請保持一致）
+  goatcounter: "",              // GoatCounter 代碼，例如 "audiowatch"（= audiowatch.goatcounter.com）
   version: "2.0.1",
-  sha256: "3fcda53762747ab0f4d3cdc08d6ef83fc5e319124d2d76558c7d9f3cb57c5b49",
+  sha256: "c9bce8094b4b7dbc6e977d6802edee371b5d2a45fa753a707d034df126ae7327",
   email: "tcpb0919@gmail.com"
 };
 </script>
@@ -172,11 +172,11 @@ footer{background:var(--paper-2);padding:44px 0 52px;margin-top:40px;font-size:1
       <div class="cta">
         <a class="btn" id="dl" href="#">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
-          下載 AudioWatch v2.0.1
+          下載 AudioWatch
         </a>
         <a class="ghost" href="#how">先看怎麼用</a>
       </div>
-      <p class="meta" style="margin-top:18px"><span id="ver">版本 2.0.1</span><span>Windows 10／11</span><span>免費使用</span></p>
+      <p class="meta" style="margin-top:18px"><span id="ver">版本 1.3.0</span><span>Windows 10／11</span><span>免費使用</span></p>
     </div>
 
     <div class="desk" aria-label="小視窗實際運作示範">
@@ -284,7 +284,7 @@ footer{background:var(--paper-2);padding:44px 0 52px;margin-top:40px;font-size:1
     </ul>
 
     <div class="hash">
-      <div class="label" id="hashLabel">AudioWatch.exe 官方 SHA256（版本 2.0.1）</div>
+      <div class="label" id="hashLabel">AudioWatch.exe 官方 SHA256（版本 1.3.0）</div>
       <code id="hash"></code>
       <div class="tools">
         <button class="copy" type="button" id="copyHash">複製雜湊值</button>
