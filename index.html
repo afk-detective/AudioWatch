@@ -18,12 +18,13 @@
    網站設定：上架後只需要改這裡
    ========================================================= */
 const SITE = {
-  githubUser: "afk-detective",               // 放網站與下載檔的 GitHub 帳號，例如 "my-account"
+  githubUser: "",               // 放網站與下載檔的 GitHub 帳號，例如 "my-account"
   repo: "audiowatch",           // repo 名稱
   assetName: "AudioWatch.zip",  // Releases 上傳的檔名（請保持一致）
-  goatcounter: "afkdetective",              // GoatCounter 代碼，例如 "audiowatch"（= audiowatch.goatcounter.com）
+  goatcounter: "",              // GoatCounter 代碼，例如 "audiowatch"（= audiowatch.goatcounter.com）
   version: "2.0.1",
   sha256: "c9bce8094b4b7dbc6e977d6802edee371b5d2a45fa753a707d034df126ae7327",
+  pastDownloads: 10,           // 已刪除的舊版 release 累積的下載次數（v2.0.0 約 10 次）
   email: "tcpb0919@gmail.com"
 };
 </script>
@@ -365,7 +366,7 @@ footer{background:var(--paper-2);padding:44px 0 52px;margin-top:40px;font-size:1
     else fetch("https://api.github.com/repos/" + SITE.githubUser + "/" + SITE.repo + "/releases?per_page=100")
       .then(function(r){ if (!r.ok) throw 0; return r.json(); })
       .then(function(list){
-        var n = 0;
+        var n = SITE.pastDownloads || 0;
         list.forEach(function(rel){ (rel.assets || []).forEach(function(a){ n += a.download_count || 0; }); });
         $("downloads").textContent = n.toLocaleString("zh-TW");
         try { sessionStorage.setItem(key, JSON.stringify({ t: Date.now(), n: n })); } catch(e) {}
