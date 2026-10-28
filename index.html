@@ -22,8 +22,8 @@ const SITE = {
   repo: "audiowatch",           // repo 名稱
   assetName: "AudioWatch.zip",  // Releases 上傳的檔名（請保持一致）
   goatcounter: "afkdetective",  // GoatCounter 代碼（= afkdetective.goatcounter.com）
-  version: "2.1.0",
-  sha256: "49d37b817cae628c8f05513426c288dc6b3fc6f419da902918ac36512d7444fd",
+  version: "2.2.0",
+  sha256: "d8a17a35afbce837bc681558c71d87d56f0c13cf8537ce76247d05deb3391e38",
   pastDownloads: 10,           // 已刪除的舊版 release 累積的下載次數（v2.0.0 約 10 次）
   email: "tcpb0919@gmail.com"
 };
@@ -188,7 +188,7 @@ footer{background:var(--paper-2);padding:44px 0 52px;margin-top:40px;font-size:1
         <button type="button" data-s="black" aria-pressed="false">畫面全黑</button>
         <button type="button" data-s="voice" aria-pressed="false">忘了按錄影</button>
         <button type="button" data-s="done" aria-pressed="false">錄影結束</button>
-        <button type="button" data-s="noaudio" aria-pressed="false">錄影檔沒聲音</button>
+        <button type="button" data-s="noaudio" aria-pressed="false">一段沒錄到</button>
       </div>
       <p class="demo-cap" id="cap" aria-live="polite"></p>
     </div>
@@ -240,15 +240,15 @@ footer{background:var(--paper-2);padding:44px 0 52px;margin-top:40px;font-size:1
 
   <section id="verify">
     <h2>錄影結束後，確認錄影檔真的有聲音</h2>
-    <p class="sub">v2.1 新增。專門防範「有畫面、沒聲音」：錄影軟體把音軌關掉或軟體不相容時，錄影當下的收音燈號可能都是綠的，問題要到調閱錄影檔才會發現。</p>
+    <p class="sub">v2.1 起新增、v2.2 加強。專門防範「有畫面、沒聲音」：錄影軟體把音軌關掉或軟體不相容時，錄影當下的收音燈號可能都是綠的，問題要到調閱錄影檔才會發現。</p>
     <div class="three">
       <div>
         <h3>錄後驗檔</h3>
-        <p class="sub">錄影檔停止寫入約 20 秒後，請 Windows 讀取錄影檔的屬性（跟檔案總管「詳細資料」同一套），確認有音軌、長度和計時相符。只讀不改，不解碼聲音畫面。</p>
+        <p class="sub">錄影檔停止寫入約 20 秒後，讀取錄影檔屬性確認有音軌、長度相符，再把音軌逐秒算出音量，和錄影當時麥克風聽到的對照：哪一段沒錄進去，直接指出時間。只算數字，不保存聲音、不辨識內容、不讀影像。</p>
       </div>
       <div>
         <h3>沒聲音就紅燈到你看見</h3>
-        <p class="sub">沒有音軌時亮紅燈並發出提示音，一直保留到按下「已知悉」為止，人不在座位也不會漏看。長度差超過 10 秒亮黃燈；格式讀不到屬性時顯示灰色「無法驗證」，不會誤報綠燈。</p>
+        <p class="sub">沒有音軌、整段靜音，或有一段沒錄到聲音時亮紅燈並發出提示音，一直保留到按下「已知悉」為止，人不在座位也不會漏看。長度差超過 10 秒亮黃燈；格式讀不到屬性時顯示灰色「無法驗證」，不會誤報綠燈。</p>
       </div>
       <div>
         <h3>可驗證的筆錄日誌</h3>
@@ -258,6 +258,7 @@ footer{background:var(--paper-2);padding:44px 0 52px;margin-top:40px;font-size:1
     <div class="narrow" style="margin-top:26px">
       <details><summary>日誌存在哪裡？記了什麼、沒記什麼？</summary><p>預設在「文件\AudioWatch\日誌\年\月\」，可在右鍵選單改到單位指定的資料夾。記錄程式版本與雜湊值、電腦名稱、麥克風、錄影開始與結束、異常起訖、驗檔結果、按「已知悉」的時間和你手動加註的內容。不記受詢問人姓名、身分證號、案號，也沒有任何聲音或影像。另有每天一份系統日誌，記錄程式開關、睡眠喚醒、麥克風插拔等背景資料。</p></details>
       <details><summary>怎麼證明日誌事後沒被改過？</summary><p>錄影停止 15 分鐘後，日誌會自動封存並設為唯讀。右鍵 →「筆錄日誌」→「複製最近一份筆錄日誌的雜湊值」，貼到職務報告或筆錄備註。日後用「驗證日誌檔」會顯示「完整」或「第 N 行起不符」；資訊室或法院也可用 Windows 內建指令 <code>certutil -hashfile 檔名 SHA256</code> 自行計算，和報告上的雜湊值比對。</p></details>
+      <details><summary>v2.2 還多了什麼？</summary><p>錄影中驗音軌：MKV、OBS 混合式 MP4 等格式，錄影開始 1 分鐘內就能確認「音軌 ✓」，沒有音軌當場紅燈。筆錄前檢查（選用）：按錄影、說一句話、停止，確認試錄檔有聲音才顯示「可以開始」，30 分鐘內有效。本次筆錄摘要：起訖時間、異常、驗檔結果與日誌雜湊值一鍵複製，貼到職務報告。日誌也可以同步一份到單位 NAS。</p></details>
       <details><summary>哪些錄影檔格式可以驗？</summary><p>Windows 讀得到屬性的常見格式（MP4、WMV、AVI 等）都可以。MP4 通常要錄完才寫入音軌資訊，所以驗檔在錄影結束後進行。若你的錄影軟體顯示「無法驗證」，歡迎來信告知副檔名與軟體名稱。</p></details>
     </div>
   </section>
@@ -305,7 +306,7 @@ footer{background:var(--paper-2);padding:44px 0 52px;margin-top:40px;font-size:1
     <ul class="safe">
       <li>不錄音：只計算音量大小，聲音不保存</li>
       <li>不錄影：只看你框選的區域，縮圖不存檔</li>
-      <li>不碰影片內容：錄影結束只讀檔案屬性（有無音軌、長度），不解碼、不修改</li>
+      <li>不碰影片內容：錄影結束只算每秒音量數字，不保存聲音、不辨識內容、不讀影像、不修改</li>
       <li>不連網：程式沒有任何網路功能</li>
       <li>不需要系統管理員權限、不修改系統設定</li>
       <li>不會開機自動執行，關掉就完全停止</li>
@@ -325,6 +326,7 @@ footer{background:var(--paper-2);padding:44px 0 52px;margin-top:40px;font-size:1
   <section id="changes">
     <h2>版本紀錄</h2>
     <table class="lights">
+      <tr><td>v2.2.0</td><td>逐段音量檢查（找出中途沒錄到聲音的時段）、錄影中驗音軌、筆錄前檢查（選用）、本次筆錄摘要、日誌同步到單位資料夾</td></tr>
       <tr><td>v2.1.0</td><td>錄後驗檔（音軌＋長度）、逐行雜湊鏈筆錄日誌與每日系統日誌、驗證日誌、待命與筆錄狀態分流、「30 分鐘內不再提醒」、「是否忘了停止錄影？」提醒</td></tr>
       <tr><td>v2.0.1</td><td>節慶橫幅樣式調整；教育訓練簡報放入下載包</td></tr>
       <tr><td>v2.0</td><td>節慶彩蛋；筆錄結束「辛苦了」；錄影停止後仍有人說話時提醒</td></tr>
@@ -428,10 +430,10 @@ footer{background:var(--paper-2);padding:44px 0 52px;margin-top:40px;font-size:1
               chips:[["ok","收音 正常"],["alarm","畫面 全黑"],["ok","錄影中"]], cap:"錄影預覽變成全黑或無訊號畫面時，立刻提醒。" },
     voice:  { lv:"warn",  title:"有人說話，但沒有在錄影", sub:"請確認是否已按下錄影", rec:false, thumb:"img", audio:"talk",
               chips:[["ok","收音 正常"],["ok","畫面 正常"],["warn","錄影 未開始"]], cap:"麥克風聽到說話，卻沒有錄影檔在寫入，就會提醒你按錄影。", action:"30 分鐘內不再提醒" },
-    done:   { lv:"ok",    title:"辛苦了！", sub:"錄影檔有聲音 ✓ 47 分鐘，全程收音正常", rec:false, thumb:"img", audio:"quiet",
-              chips:[["ok","收音 正常"],["ok","畫面 正常"],["ok","錄影 有聲音"]], cap:"錄影結束後自動讀取錄影檔屬性，確認裡面真的有音軌。" },
-    noaudio:{ lv:"alarm", title:"錄影檔沒有聲音！", sub:"請立即回放確認，必要時重新製作", rec:false, thumb:"img", audio:"quiet",
-              chips:[["ok","收音 正常"],["ok","畫面 正常"],["alarm","錄影 無聲音"]], cap:"錄影檔只有畫面、沒有音軌：紅燈＋提示音，按「已知悉」才會消失。", action:"已知悉" }
+    done:   { lv:"ok",    title:"辛苦了！", sub:"錄影檔聲音完整 ✓ 47 分鐘，全程收音正常", rec:false, thumb:"img", audio:"quiet", action:"摘要",
+              chips:[["ok","收音 正常"],["ok","畫面 正常"],["ok","錄影 有聲音"]], cap:"錄影結束後逐秒檢查錄影檔音量，確認聲音完整；按「摘要」可複製本次筆錄紀錄。" },
+    noaudio:{ lv:"alarm", title:"錄影檔有一段沒錄到聲音！", sub:"10:05–10:07 有人說話但錄影檔無聲", rec:false, thumb:"img", audio:"quiet",
+              chips:[["ok","收音 正常"],["ok","畫面 正常"],["alarm","錄影 無聲音"]], cap:"錄影檔某段無聲、麥克風同時有人說話：紅燈指出時間，按「已知悉」才會消失。", action:"已知悉" }
   };
   var LV = { ok:C.green, warn:C.amber, alarm:C.red, off:C.faint };
   var cur = "ok", auto = !reduce, order = ["ok","nodata","ok","black","ok","voice","done","noaudio"], oi = 0, lastSwitch = performance.now();
